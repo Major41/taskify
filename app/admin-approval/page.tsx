@@ -38,7 +38,7 @@ export default function AdminApprovalPage() {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "user" | "ADMIN" | "SUPER ADMIN"
+    "all" | "USER" | "ADMIN" | "SUPER ADMIN"
   >("all");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export default function AdminApprovalPage() {
 
   const updateUserRole = async (
     userId: string,
-    newRole: "user" | "ADMIN" | "SUPER ADMIN"
+    newRole: "USER" | "ADMIN" | "SUPER ADMIN"
   ) => {
     if (!currentUser || currentUser.role !== "SUPER ADMIN") {
       showAlert("error", "Only SUPER ADMIN can modify user roles");
@@ -174,7 +174,7 @@ export default function AdminApprovalPage() {
       case "ADMIN":
         return "Admin";
       default:
-        return "User";
+        return "USER";
     }
   };
 
@@ -282,7 +282,7 @@ export default function AdminApprovalPage() {
               className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Roles</option>
-              <option value="user">Users</option>
+              <option value="USER">Users</option>
               <option value="ADMIN">Admins</option>
               <option value="SUPER ADMIN">Super Admins</option>
             </select>
@@ -390,7 +390,7 @@ export default function AdminApprovalPage() {
                       user._id !== currentUser.id && (
                         <div className="flex space-x-2">
                           {/* Make Admin - show for users */}
-                          {user.role === "user" && (
+                          {user.role === "USER" && (
                             <button
                               onClick={() => updateUserRole(user._id, "ADMIN")}
                               disabled={updating === user._id}
@@ -409,7 +409,7 @@ export default function AdminApprovalPage() {
                           {user.role !== "SUPER ADMIN" && (
                             <button
                               onClick={() =>
-                                updateUserRole(user._id, "SUPER ADMIN")
+                                updateUserRole(user._id, "ADMIN")
                               }
                               disabled={updating === user._id}
                               className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -419,7 +419,7 @@ export default function AdminApprovalPage() {
                               ) : (
                                 <Crown className="h-3 w-3 mr-1" />
                               )}
-                              Make Super Admin
+                              Make  Admin
                             </button>
                           )}
 
