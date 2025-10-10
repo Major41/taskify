@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     // Find user by phone number and role
     const user = await usersCollection.findOne({
       phone_number: phone_number,
-      role: "ADMIN",
+      role: { $in: ["ADMIN", "SUPER_ADMIN"] },
     });
 
     // console.log("Found user:", user);
