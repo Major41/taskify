@@ -213,10 +213,7 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
           return (
             <div
               key={index}
-              className="bg-white rounded-lg shadow-xs border border-gray-200 p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-gray-300 group"
-              onClick={() =>
-                (window.location.href = `/orders?filter=${stat.filter}`)
-              }
+              className="bg-white rounded-lg shadow-xs border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-gray-300 group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">

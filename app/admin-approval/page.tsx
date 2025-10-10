@@ -405,28 +405,12 @@ export default function AdminApprovalPage() {
                             </button>
                           )}
 
-                          {/* Make Super Admin - show for users and admins */}
-                          {user.role !== "SUPER ADMIN" && (
-                            <button
-                              onClick={() =>
-                                updateUserRole(user._id, "ADMIN")
-                              }
-                              disabled={updating === user._id}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updating === user._id ? (
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              ) : (
-                                <Crown className="h-3 w-3 mr-1" />
-                              )}
-                              Make  Admin
-                            </button>
-                          )}
+                         
 
                           {/* Remove Admin - show for admins */}
                           {user.role === "ADMIN" && (
                             <button
-                              onClick={() => updateUserRole(user._id, "user")}
+                              onClick={() => updateUserRole(user._id, "USER")}
                               disabled={updating === user._id}
                               className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >

@@ -277,14 +277,6 @@ export default function Sidebar({ children }: SidebarProps) {
 
               {/* Header Actions */}
               <div className="flex items-center space-x-2">
-                {/* Search */}
-                <button
-                  onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60"
-                >
-                  <Search className="w-5 h-5" />
-                </button>
-
                 {/* Refresh */}
                 <button className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60">
                   <RefreshCw className="w-5 h-5" />
