@@ -89,15 +89,14 @@ export default function PaymentsPage() {
       );
     }
 
+    // console.log(payment)
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (payment) =>
-          payment.recipient.name.toLowerCase().includes(query) ||
-          payment.recipient.phone.toLowerCase().includes(query) ||
-          payment.order.requestNumber.toLowerCase().includes(query) ||
-          payment.transactionId?.toLowerCase().includes(query)
+          payment.user?.name?.toLowerCase().includes(query) ||
+          payment.user?.phone?.toLowerCase().includes(query)
       );
     }
 

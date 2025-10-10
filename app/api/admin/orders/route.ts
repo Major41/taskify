@@ -44,6 +44,7 @@ export async function GET() {
             taskerProfileImage: "$taskerInfo.profile_url",
             clientName: { $ifNull: ["$clientInfo.first_name", "N/A"] },
             clientPhone: { $ifNull: ["$clientInfo.phone_number", "N/A"] },
+            taskerPhone: { $ifNull: ["$taskerInfo.phone_number", "N/A"] },
             status: "$notification_status",
             amount: { $ifNull: ["$budget", 0] },
             description: { $ifNull: ["$task_description", "No description"] },

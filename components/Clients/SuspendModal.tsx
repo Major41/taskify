@@ -91,7 +91,7 @@ export default function SuspendModal({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Please provide a detailed reason for suspending this client..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-vertical"
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-vertical"
               />
             </div>
 
