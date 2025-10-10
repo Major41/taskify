@@ -11,9 +11,10 @@ import {
   AlertCircle,
   CheckCircle,
   User,
-  UserCheck,
   Crown,
 } from "lucide-react";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   _id: string;
@@ -24,35 +25,33 @@ interface User {
   avatar_url?: string;
   phone_number?: string;
   isTasker: boolean;
-  role: "user" | "admin" | "SUPER_ADMIN";
+  role: "user" | "ADMIN" | "SUPER ADMIN";
   createdAt: string;
   isPhone_number_verified?: boolean;
-  client_average_rating?: number;
-  client_complete_tasks?: number;
 }
 
 export default function AdminApprovalPage() {
+  const { user: currentUser } = useAuth();
+  const { loading: authLoading } = useProtectedRoute("SUPER ADMIN");
+
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<
-    "all" | "user" | "admin" | "SUPER_ADMIN"
+    "all" | "user" | "ADMIN" | "SUPER ADMIN"
   >("all");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<
-    "user" | "admin" | "SUPER_ADMIN"
-  >("user");
   const [alert, setAlert] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
   useEffect(() => {
-    fetchUsers();
-    // In a real app, you'd get this from your auth context/session
-    checkCurrentUserRole();
-  }, []);
+    if (currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     filterUsers();
@@ -77,24 +76,9 @@ export default function AdminApprovalPage() {
     }
   };
 
-  const checkCurrentUserRole = async () => {
-    // This should come from your authentication system
-    // For now, we'll simulate getting the current user's role
-    // In a real app, you'd fetch this from your auth API
-    try {
-      const response = await fetch("/api/auth/me"); // Your auth endpoint
-      const userData = await response.json();
-      setCurrentUserRole(userData.role || "user");
-    } catch (error) {
-      console.error("Error fetching current user role:", error);
-      setCurrentUserRole("user");
-    }
-  };
-
   const filterUsers = () => {
     let filtered = users;
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -106,7 +90,6 @@ export default function AdminApprovalPage() {
       );
     }
 
-    // Apply role filter
     if (roleFilter !== "all") {
       filtered = filtered.filter((user) => user.role === roleFilter);
     }
@@ -116,10 +99,10 @@ export default function AdminApprovalPage() {
 
   const updateUserRole = async (
     userId: string,
-    newRole: "user" | "admin" | "SUPER_ADMIN"
+    newRole: "user" | "ADMIN" | "SUPER ADMIN"
   ) => {
-    if (currentUserRole !== "SUPER_ADMIN") {
-      showAlert("error", "Only SUPER_ADMIN can modify user roles");
+    if (!currentUser || currentUser.role !== "SUPER ADMIN") {
+      showAlert("error", "Only SUPER ADMIN can modify user roles");
       return;
     }
 
@@ -133,14 +116,13 @@ export default function AdminApprovalPage() {
         body: JSON.stringify({
           userId,
           role: newRole,
-          currentUserRole,
+          currentUserRole: currentUser.role,
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Update local state
         setUsers((prev) =>
           prev.map((user) =>
             user._id === userId ? { ...user, role: newRole } : user
@@ -165,7 +147,7 @@ export default function AdminApprovalPage() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case "SUPER_ADMIN":
+      case "SUPER ADMIN":
         return <Crown className="h-4 w-4" />;
       case "ADMIN":
         return <ShieldCheck className="h-4 w-4" />;
@@ -176,7 +158,7 @@ export default function AdminApprovalPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "SUPER_ADMIN":
+      case "SUPER ADMIN":
         return "bg-purple-100 text-purple-800 border-purple-200";
       case "ADMIN":
         return "bg-blue-100 text-blue-800 border-blue-200";
@@ -187,19 +169,45 @@ export default function AdminApprovalPage() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
-      case "SUPER_ADMIN":
+      case "SUPER ADMIN":
         return "Super Admin";
       case "ADMIN":
         return "Admin";
       default:
-        return "USER";
+        return "User";
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "SUPER ADMIN") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <ShieldOff className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 mb-4">
+            You need SUPER ADMIN privileges to access this page.
+          </p>
+          <div
+            className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${getRoleColor(
+              currentUser?.role || "user"
+            )}`}
+          >
+            {getRoleIcon(currentUser?.role || "user")}
+            <span className="ml-2">
+              Your role: {getRoleBadge(currentUser?.role || "user")}
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -231,21 +239,24 @@ export default function AdminApprovalPage() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Approval</h1>
         </div>
         <p className="text-gray-600">
-          Manage user roles and permissions. Only SUPER_ADMIN can modify roles.
+          Manage user roles and permissions. Only SUPER ADMIN can modify roles.
         </p>
 
         {/* Current User Role Indicator */}
-        <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border bg-white">
-          <Shield className="h-4 w-4 mr-2" />
-          Your role:
-          <span
-            className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
-              currentUserRole
-            )}`}
-          >
-            {getRoleBadge(currentUserRole)}
-          </span>
-        </div>
+        {currentUser && (
+          <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border bg-white">
+            <Shield className="h-4 w-4 mr-2" />
+            Your role:
+            <span
+              className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(
+                currentUser.role
+              )}`}
+            >
+              {getRoleIcon(currentUser.role)}
+              <span className="ml-1">{getRoleBadge(currentUser.role)}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -259,7 +270,7 @@ export default function AdminApprovalPage() {
               placeholder="Search users by name or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-black pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
@@ -272,8 +283,8 @@ export default function AdminApprovalPage() {
             >
               <option value="all">All Roles</option>
               <option value="user">Users</option>
-              <option value="admin">Admins</option>
-              <option value="SUPER_ADMIN">Super Admins</option>
+              <option value="ADMIN">Admins</option>
+              <option value="SUPER ADMIN">Super Admins</option>
             </select>
           </div>
         </div>
@@ -373,28 +384,47 @@ export default function AdminApprovalPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {currentUserRole === "SUPER_ADMIN" ? (
-                      <div className="flex space-x-2">
-                        {/* Promote to Admin */}
-                        {user.role === "user" && (
-                          <button
-                            onClick={() => updateUserRole(user._id, "admin")}
-                            disabled={updating === user._id}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updating === user._id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <ShieldCheck className="h-3 w-3 mr-1" />
-                            )}
-                            Make Admin
-                          </button>
-                        )}
+                    {/* FIXED: Show actions for all users except current SUPER ADMIN */}
+                    {currentUser &&
+                      currentUser.role === "SUPER ADMIN" &&
+                      user._id !== currentUser.id && (
+                        <div className="flex space-x-2">
+                          {/* Make Admin - show for users */}
+                          {user.role === "user" && (
+                            <button
+                              onClick={() => updateUserRole(user._id, "ADMIN")}
+                              disabled={updating === user._id}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updating === user._id ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <ShieldCheck className="h-3 w-3 mr-1" />
+                              )}
+                              Make Admin
+                            </button>
+                          )}
 
-                        {/* Demote to User */}
-                        {(user.role === "admin" ||
-                          user.role === "SUPER_ADMIN") &&
-                          user.role !== "SUPER_ADMIN" && (
+                          {/* Make Super Admin - show for users and admins */}
+                          {user.role !== "SUPER ADMIN" && (
+                            <button
+                              onClick={() =>
+                                updateUserRole(user._id, "SUPER ADMIN")
+                              }
+                              disabled={updating === user._id}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {updating === user._id ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <Crown className="h-3 w-3 mr-1" />
+                              )}
+                              Make Super Admin
+                            </button>
+                          )}
+
+                          {/* Remove Admin - show for admins */}
+                          {user.role === "ADMIN" && (
                             <button
                               onClick={() => updateUserRole(user._id, "user")}
                               disabled={updating === user._id}
@@ -409,27 +439,33 @@ export default function AdminApprovalPage() {
                             </button>
                           )}
 
-                        {/* Make Super Admin */}
-                        {user.role !== "SUPER_ADMIN" && (
-                          <button
-                            onClick={() =>
-                              updateUserRole(user._id, "SUPER_ADMIN")
-                            }
-                            disabled={updating === user._id}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updating === user._id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <Crown className="h-3 w-3 mr-1" />
+                          {/* Demote Super Admin to User - show for other SUPER ADMINS */}
+                          {user.role === "SUPER ADMIN" &&
+                            user._id !== currentUser.id && (
+                              <button
+                                onClick={() => updateUserRole(user._id, "user")}
+                                disabled={updating === user._id}
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {updating === user._id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <ShieldOff className="h-3 w-3 mr-1" />
+                                )}
+                                Demote to User
+                              </button>
                             )}
-                            Make Super Admin
-                          </button>
-                        )}
-                      </div>
-                    ) : (
+                        </div>
+                      )}
+
+                    {/* Show no permissions for non-SUPER ADMIN users or current user */}
+                    {(!currentUser ||
+                      currentUser.role !== "SUPER ADMIN" ||
+                      user._id === currentUser.id) && (
                       <span className="text-gray-400 text-sm">
-                        No permissions
+                        {user._id === currentUser?.id
+                          ? "Current user"
+                          : "No permissions"}
                       </span>
                     )}
                   </td>

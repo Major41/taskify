@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { db } = await connectToDatabase();
 
@@ -20,7 +20,7 @@ export async function GET() {
             avatar_url: 1,
             phone_number: 1,
             isTasker: 1,
-            role: { $ifNull: ["$role", "USER"] }, // Default to 'USER' if role doesn't exist
+            role: { $ifNull: ["$role", "user"] },
             createdAt: 1,
             isPhone_number_verified: 1,
             client_average_rating: 1,
@@ -65,7 +65,7 @@ export async function PUT(request: Request) {
     }
 
     // Validate role
-    const validRoles = ["USER", "ADMIN", "SUPER_ADMIN"];
+    const validRoles = ["user", "admin", "SUPER_ADMIN"];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         {

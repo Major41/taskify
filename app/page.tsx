@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { authService, LoginCredentials } from "@/lib/auth";
 import { Phone, Lock, LogIn, Loader2, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
@@ -13,28 +14,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   // Convert Kenyan phone number to international format
   const formatToInternational = (phoneNumber: string): string => {
-    // Remove all non-digit characters
     const digits = phoneNumber.replace(/\D/g, "");
 
-    // Handle Kenyan numbers starting with 0
     if (digits.startsWith("0") && digits.length === 10) {
       return `+254${digits.slice(1)}`;
     }
 
-    // Handle Kenyan numbers starting with 7 (without 0)
     if (digits.startsWith("7") && digits.length === 9) {
       return `+254${digits}`;
     }
 
-    // Handle numbers that already have +254
     if (digits.startsWith("254") && digits.length === 12) {
       return `+${digits}`;
     }
 
-    // Return as is if it doesn't match Kenyan format
     return phoneNumber;
   };
 
@@ -44,7 +41,6 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Convert phone to international format before sending
       const internationalPhone = formatToInternational(phone);
 
       const credentials: LoginCredentials = {
@@ -52,13 +48,13 @@ export default function LoginPage() {
         password: password,
       };
 
-      console.log("Sending credentials:", credentials); // For debugging
+      console.log("Sending credentials:", credentials);
 
       const response = await authService.login(credentials);
 
       if (response.success && response.user) {
-        // Store user data
-        localStorage.setItem("tasksfyUser", JSON.stringify(response.user));
+        // Use the context to login instead of localStorage directly
+        login(response.user);
 
         // Redirect to dashboard
         router.push("/dashboard");
@@ -75,12 +71,10 @@ export default function LoginPage() {
     }
   };
 
-  // Format phone number for display as user types
+  // ... rest of your existing code (formatPhoneDisplay, handlePhoneChange, etc.)
   const formatPhoneDisplay = (value: string) => {
-    // Remove all non-digit characters
     const digits = value.replace(/\D/g, "");
 
-    // Format as 0702 123 456 for display
     if (digits.length <= 3) {
       return digits;
     } else if (digits.length <= 6) {
@@ -98,7 +92,6 @@ export default function LoginPage() {
     setPhone(formatted);
   };
 
-  // Show formatted international number for user feedback
   const getInternationalPreview = () => {
     if (!phone) return "";
     const international = formatToInternational(phone);
@@ -128,8 +121,11 @@ export default function LoginPage() {
           <p className="text-xl md:text-2xl text-green-100 leading-relaxed">
             <em>
               <span className="text-yellow-400 font-semibold">Your </span>{" "}
-              <span className="text-white">Day </span> <span className="text-yellow-400 font-semibold">to</span>{" "}
-              <span className="text-white"> Day </span> <span className="text-yellow-400 font-semibold">App for</span> <br />
+              <span className="text-white">Day </span>{" "}
+              <span className="text-yellow-400 font-semibold">to</span>{" "}
+              <span className="text-white"> Day </span>{" "}
+              <span className="text-yellow-400 font-semibold">App for</span>{" "}
+              <br />
               <span className="text-yellow-400 font-semibold">
                 service Outsourcing
               </span>
@@ -195,7 +191,7 @@ export default function LoginPage() {
                 onChange={handlePhoneChange}
                 required
                 disabled={loading}
-                maxLength={11} // 3 + space + 3 + space + 3 = 11
+                maxLength={11}
                 className="w-full pl-10 pr-4 text-black py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
@@ -257,7 +253,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Copyright Footer */}
         <div className="mt-8 text-center text-gray-600 text-sm flex items-center justify-center">
           <span>Copyright Tasksfy Inc © 2025</span>
         </div>
