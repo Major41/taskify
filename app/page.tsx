@@ -1,103 +1,266 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { authService, LoginCredentials } from "@/lib/auth";
+import { Phone, Lock, LogIn, Loader2, Eye, EyeOff } from "lucide-react";
 
-export default function Home() {
+export default function LoginPage() {
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  // Convert Kenyan phone number to international format
+  const formatToInternational = (phoneNumber: string): string => {
+    // Remove all non-digit characters
+    const digits = phoneNumber.replace(/\D/g, "");
+
+    // Handle Kenyan numbers starting with 0
+    if (digits.startsWith("0") && digits.length === 10) {
+      return `+254${digits.slice(1)}`;
+    }
+
+    // Handle Kenyan numbers starting with 7 (without 0)
+    if (digits.startsWith("7") && digits.length === 9) {
+      return `+254${digits}`;
+    }
+
+    // Handle numbers that already have +254
+    if (digits.startsWith("254") && digits.length === 12) {
+      return `+${digits}`;
+    }
+
+    // Return as is if it doesn't match Kenyan format
+    return phoneNumber;
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Convert phone to international format before sending
+      const internationalPhone = formatToInternational(phone);
+
+      const credentials: LoginCredentials = {
+        phone_number: internationalPhone,
+        password: password,
+      };
+
+      console.log("Sending credentials:", credentials); // For debugging
+
+      const response = await authService.login(credentials);
+
+      if (response.success && response.user) {
+        // Store user data
+        localStorage.setItem("tasksfyUser", JSON.stringify(response.user));
+
+        // Redirect to dashboard
+        router.push("/dashboard");
+      } else {
+        setError(
+          response.message || "Login failed. Please check your credentials."
+        );
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Format phone number for display as user types
+  const formatPhoneDisplay = (value: string) => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, "");
+
+    // Format as 0702 123 456 for display
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    } else {
+      return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(
+        6,
+        9
+      )}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneDisplay(e.target.value);
+    setPhone(formatted);
+  };
+
+  // Show formatted international number for user feedback
+  const getInternationalPreview = () => {
+    if (!phone) return "";
+    const international = formatToInternational(phone);
+    return international !== phone ? ` (${international})` : "";
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Sidebar Section */}
+      <aside className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="flex justify-center mb-6">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+              src="/logo.jpeg"
+              alt="TasksFy Logo"
+              className="rounded-xl shadow-2xl"
+              width={80}
+              height={80}
+              priority
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Tasksfy</h1>
+          <p className="text-xl md:text-2xl text-green-100 leading-relaxed">
+            <em>
+              Your <span className="text-white">Day </span>to
+              <span className="text-white"> Day </span>App for <br />
+              service{" "}
+              <span className="text-yellow-400 font-semibold">Outsourcing</span>
+            </em>
+          </p>
+        </div>
+      </aside>
+
+      {/* Login Form Section */}
+      <main className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50">
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-200"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <LogIn className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
+            <p className="text-gray-600 mt-2">Sign in to your admin account</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 border-l-4 border-red-400 flex items-center">
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {error}
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label
+              htmlFor="phone"
+              className="block text-sm font-semibold text-gray-700 mb-2 flex items-center"
+            >
+              <Phone className="w-4 h-4 mr-2" />
+              Phone Number
+              {phone && (
+                <span className="text-xs text-green-600 font-normal ml-2">
+                  {getInternationalPreview()}
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="start with 712121212"
+                value={phone}
+                onChange={handlePhoneChange}
+                required
+                disabled={loading}
+                maxLength={11} // 3 + space + 3 + space + 3 = 11
+                className="w-full pl-10 pr-4 text-black py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+          
+          </div>
+
+          <div className="mb-6">
+            <label
+              htmlFor="password"
+              className="block text-sm font-semibold text-gray-700 mb-2 flex items-center"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="w-full pl-10 pr-12 text-black py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
           >
-            Read our docs
-          </a>
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Logging in...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-5 h-5" />
+                <span>Login as Admin</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Copyright Footer */}
+        <div className="mt-8 text-center text-gray-600 text-sm flex items-center justify-center">
+          <span>Copyright Tasksfy Inc © 2025</span>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
