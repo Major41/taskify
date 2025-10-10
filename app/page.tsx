@@ -127,10 +127,12 @@ export default function LoginPage() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Tasksfy</h1>
           <p className="text-xl md:text-2xl text-green-100 leading-relaxed">
             <em>
-              Your <span className="text-white">Day </span>to
-              <span className="text-white"> Day </span>App for <br />
-              service{" "}
-              <span className="text-yellow-400 font-semibold">Outsourcing</span>
+              <span className="text-yellow-400 font-semibold">Your </span>{" "}
+              <span className="text-white">Day </span> <span className="text-yellow-400 font-semibold">to</span>{" "}
+              <span className="text-white"> Day </span> <span className="text-yellow-400 font-semibold">App for</span> <br />
+              <span className="text-yellow-400 font-semibold">
+                service Outsourcing
+              </span>
             </em>
           </p>
         </div>
@@ -197,7 +199,6 @@ export default function LoginPage() {
                 className="w-full pl-10 pr-4 text-black py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
-          
           </div>
 
           <div className="mb-6">
