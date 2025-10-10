@@ -170,7 +170,7 @@ export default function LoginPage() {
           <div className="mb-6">
             <label
               htmlFor="phone"
-              className="block text-sm font-semibold text-gray-700 mb-2 flex items-center"
+              className="block text-sm font-semibold text-gray-700 mb-2 items-center"
             >
               <Phone className="w-4 h-4 mr-2" />
               Phone Number
@@ -203,7 +203,7 @@ export default function LoginPage() {
           <div className="mb-6">
             <label
               htmlFor="password"
-              className="block text-sm font-semibold text-gray-700 mb-2 flex items-center"
+              className="block text-sm font-semibold text-gray-700 mb-2  items-center"
             >
               <Lock className="w-4 h-4 mr-2" />
               Password

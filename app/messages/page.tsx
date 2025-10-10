@@ -377,7 +377,7 @@ export default function AdminMessagesPage() {
                   <select
                     id="broadcast-type"
                     value={broadcastType}
-                    onChange={(e) => setBroadcastType(e.target.value as any)}
+                    onChange={(e) => setBroadcastType(e.target.value as "all" | "clients" | "taskers")}
                     className="w-full px-3 text-black py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Users</option>

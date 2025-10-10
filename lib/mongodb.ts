@@ -34,7 +34,7 @@ export async function connectToDatabase(): Promise<{
       socketTimeoutMS: 45000,
     };
 
-    cached.promise = MongoClient.connect(MONGODB_URI, opts).then((client) => {
+    cached.promise = MongoClient.connect(MONGODB_URI as string, opts).then((client) => {
       const db = client.db("tasksfy"); // Uses database from connection string
       return { client, db };
     });
@@ -71,7 +71,7 @@ async function dbConnect() {
     };
 
     cachedMongoose.promise = mongoose
-      .connect(MONGODB_URI, opts)
+      .connect(MONGODB_URI as string, opts)
       .then((mongoose) => {
         return mongoose;
       });
