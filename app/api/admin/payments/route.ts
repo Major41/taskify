@@ -44,7 +44,7 @@ export async function GET() {
               _id: "$userInfo._id",
               name: "$userInfo.first_name",
               phone: "$userInfo.phone_number",
-              avatar_url: "$userInfo.avatar_url",
+              avatar_url: "$userInfo.profile_url",
             },
             amount: "$amountPaid",
             type: "$transactionType",
