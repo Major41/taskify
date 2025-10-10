@@ -439,22 +439,8 @@ export default function AdminApprovalPage() {
                             </button>
                           )}
 
-                          {/* Demote Super Admin to User - show for other SUPER ADMINS */}
-                          {user.role === "SUPER ADMIN" &&
-                            user._id !== currentUser.id && (
-                              <button
-                                onClick={() => updateUserRole(user._id, "user")}
-                                disabled={updating === user._id}
-                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {updating === user._id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                ) : (
-                                  <ShieldOff className="h-3 w-3 mr-1" />
-                                )}
-                                Demote to User
-                              </button>
-                            )}
+                      
+                         
                         </div>
                       )}
 

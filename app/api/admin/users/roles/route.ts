@@ -54,18 +54,18 @@ export async function PUT(request: Request) {
     const { userId, role, currentUserRole } = await request.json();
 
     // Check if current user is SUPER_ADMIN
-    if (currentUserRole !== "SUPER_ADMIN") {
+    if (currentUserRole !== "SUPER ADMIN") {
       return NextResponse.json(
         {
           success: false,
-          message: "Only SUPER_ADMIN can modify user roles",
+          message: "Only SUPER ADMIN can modify user roles",
         },
         { status: 403 }
       );
     }
 
     // Validate role
-    const validRoles = ["user", "admin", "SUPER_ADMIN"];
+    const validRoles = ["USER", "ADMIN", "SUPER ADMIN"];
     if (!validRoles.includes(role)) {
       return NextResponse.json(
         {
