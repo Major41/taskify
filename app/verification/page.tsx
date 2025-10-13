@@ -4,29 +4,17 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import VerificationTable from "@/components/Verification/VerificationTable";
 import VerificationFilters from "@/components/Verification/VerificationFilters";
-import VerificationStatsCards from "@/components/Verification/VerificationStatsCards";
-import {
-  VerificationRequest,
-  VerificationStats,
-  VerificationStatus,
-} from "@/types/verification";
 
 export default function VerificationPage() {
-  const [verifications, setVerifications] = useState<VerificationRequest[]>([]);
-  const [filteredVerifications, setFilteredVerifications] = useState<
-    VerificationRequest[]
-  >([]);
-  const [stats, setStats] = useState<VerificationStats | null>(null);
+  const [verifications, setVerifications] = useState([]);
+  const [filteredVerifications, setFilteredVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<
-    VerificationStatus | "all"
-  >("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const searchParams = useSearchParams();
 
   useEffect(() => {
     loadVerifications();
-    loadVerificationStats();
   }, []);
 
   useEffect(() => {
@@ -34,10 +22,9 @@ export default function VerificationPage() {
     const filter = searchParams.get("filter");
     if (
       filter &&
-      (filter === "all" ||
-        Object.values(["pending", "approved", "rejected"]).includes(filter))
+      (filter === "all" || ["pending", "approved"].includes(filter))
     ) {
-      setSelectedStatus(filter as VerificationStatus | "all");
+      setSelectedStatus(filter);
     }
   }, [searchParams]);
 
@@ -68,21 +55,6 @@ export default function VerificationPage() {
     }
   };
 
-  const loadVerificationStats = async () => {
-    try {
-      const response = await fetch("/api/admin/verifications/stats");
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.data);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load verification stats:", error);
-    }
-  };
-
   const filterVerifications = () => {
     let filtered = verifications;
 
@@ -100,97 +72,49 @@ export default function VerificationPage() {
         (verification) =>
           verification.tasker.name.toLowerCase().includes(query) ||
           verification.tasker.phone.toLowerCase().includes(query) ||
-          verification.tasker.email.toLowerCase().includes(query) ||
-          verification.skills.some((skill) =>
-            skill.toLowerCase().includes(query)
-          )
+          verification.tasker.email.toLowerCase().includes(query)
       );
     }
 
     setFilteredVerifications(filtered);
   };
 
-  const handleStageApproval = async (
-    verificationId: string,
-    stage: "stage3" | "stage4" | "final"
-  ) => {
+  const handleStageApproval = async (taskerId, stage) => {
     try {
-      const response = await fetch("/api/admin/verifications/approve-stage", {
+      const response = await fetch("/api/admin/verifications", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          verificationId,
+          taskerId,
           stage,
         }),
       });
 
       if (response.ok) {
-        // Refresh verifications and stats
+        // Refresh verifications
         await loadVerifications();
-        await loadVerificationStats();
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to approve stage:", errorData.message);
       }
     } catch (error) {
       console.error("Failed to approve stage:", error);
     }
   };
 
-  const handleStageRejection = async (
-    verificationId: string,
-    stage: "stage3" | "stage4" | "final",
-    reason: string
-  ) => {
-    try {
-      const response = await fetch("/api/admin/verifications/reject-stage", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          verificationId,
-          stage,
-          reason,
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh verifications and stats
-        await loadVerifications();
-        await loadVerificationStats();
+  const handleFinalVerification = async (taskerId, approve) => {
+    if (approve) {
+      // Approve stage 5 (final verification)
+      await handleStageApproval(taskerId, "stage5");
+    } else {
+      // For rejection, you might want to create a separate API endpoint
+      const reason = prompt("Please provide a reason for rejection:");
+      if (reason) {
+        console.log("Rejecting tasker:", taskerId, "Reason:", reason);
+        // You would call a reject API here
       }
-    } catch (error) {
-      console.error("Failed to reject stage:", error);
-    }
-  };
-
-  const handleFinalVerification = async (
-    verificationId: string,
-    approve: boolean,
-    reason?: string
-  ) => {
-    try {
-      const endpoint = approve
-        ? "/api/admin/verifications/final-approve"
-        : "/api/admin/verifications/final-reject";
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          verificationId,
-          reason,
-        }),
-      });
-
-      if (response.ok) {
-        // Refresh verifications and stats
-        await loadVerifications();
-        await loadVerificationStats();
-      }
-    } catch (error) {
-      console.error("Failed to process final verification:", error);
     }
   };
 
@@ -216,7 +140,7 @@ export default function VerificationPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Tasker Verification Requests
+              Taskers Verification Requests
             </h1>
             <p className="text-gray-600 mt-1">
               {filteredVerifications.length} verification requests found
@@ -236,15 +160,11 @@ export default function VerificationPage() {
         </div>
       </div>
 
-      {/* Verification Statistics */}
-      {stats && <VerificationStatsCards stats={stats} />}
-
       {/* Verification Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <VerificationTable
           verifications={filteredVerifications}
           onStageApproval={handleStageApproval}
-          onStageRejection={handleStageRejection}
           onFinalVerification={handleFinalVerification}
         />
       </div>

@@ -23,17 +23,11 @@ export async function POST(request: Request) {
 
     if (action === "suspend") {
       updateData = {
-        isPhone_number_verified: false,
-        suspension_reason: reason,
-        suspended_at: new Date(),
-        updatedAt: new Date(),
+        role:""
       };
     } else if (action === "reinstate") {
       updateData = {
-        isPhone_number_verified: true,
-        suspension_reason: null,
-        suspended_at: null,
-        updatedAt: new Date(),
+       role:"USER"
       };
     }
 

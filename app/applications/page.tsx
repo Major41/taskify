@@ -4,29 +4,17 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ApplicationsTable from "@/components/Applications/ApplicationsTable";
 import ApplicationsFilters from "@/components/Applications/ApplicationsFilters";
-import ApplicationStatsCards from "@/components/Applications/ApplicationStatsCards";
-import {
-  TaskerApplication,
-  ApplicationStats,
-  ApplicationStatus,
-} from "@/types/application";
 
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<TaskerApplication[]>([]);
-  const [filteredApplications, setFilteredApplications] = useState<
-    TaskerApplication[]
-  >([]);
-  const [stats, setStats] = useState<ApplicationStats | null>(null);
+  const [applications, setApplications] = useState([]);
+  const [filteredApplications, setFilteredApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<
-    ApplicationStatus | "all"
-  >("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const searchParams = useSearchParams();
 
   useEffect(() => {
     loadApplications();
-    loadApplicationStats();
   }, []);
 
   useEffect(() => {
@@ -34,10 +22,9 @@ export default function ApplicationsPage() {
     const filter = searchParams.get("filter");
     if (
       filter &&
-      (filter === "all" ||
-        Object.values(["pending", "approved", "rejected"]).includes(filter))
+      (filter === "all" || ["pending", "approved"].includes(filter))
     ) {
-      setSelectedStatus(filter as ApplicationStatus | "all");
+      setSelectedStatus(filter);
     }
   }, [searchParams]);
 
@@ -68,21 +55,6 @@ export default function ApplicationsPage() {
     }
   };
 
-  const loadApplicationStats = async () => {
-    try {
-      const response = await fetch("/api/admin/applications/stats");
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.data);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load application stats:", error);
-    }
-  };
-
   const filterApplications = () => {
     let filtered = applications;
 
@@ -101,10 +73,14 @@ export default function ApplicationsPage() {
           application.user.name.toLowerCase().includes(query) ||
           application.user.phone.toLowerCase().includes(query) ||
           application.user.email.toLowerCase().includes(query) ||
-          application.skills.some((skill) =>
-            skill.toLowerCase().includes(query)
-          ) ||
-          application.category.toLowerCase().includes(query)
+          (application.skills &&
+            application.skills.some(
+              (skill) =>
+                skill.skill_name &&
+                skill.skill_name.toLowerCase().includes(query)
+            )) ||
+          (application.category &&
+            application.category.toLowerCase().includes(query))
       );
     }
 
@@ -124,9 +100,8 @@ export default function ApplicationsPage() {
       });
 
       if (response.ok) {
-        // Refresh applications and stats
+        // Refresh applications
         await loadApplications();
-        await loadApplicationStats();
       }
     } catch (error) {
       console.error("Failed to approve application:", error);
@@ -152,9 +127,8 @@ export default function ApplicationsPage() {
       });
 
       if (response.ok) {
-        // Refresh applications and stats
+        // Refresh applications
         await loadApplications();
-        await loadApplicationStats();
       }
     } catch (error) {
       console.error("Failed to reject application:", error);
@@ -200,9 +174,6 @@ export default function ApplicationsPage() {
           </div>
         </div>
       </div>
-
-      {/* Application Statistics */}
-      {stats && <ApplicationStatsCards stats={stats} />}
 
       {/* Applications Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">

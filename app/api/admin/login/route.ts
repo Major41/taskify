@@ -20,6 +20,7 @@ export async function POST(request: Request) {
 
     // Check if users collection exists
     const usersCollection = db.collection("users");
+    console.log("Users collection accessed", usersCollection);
 
 
     // Find user by phone number and role
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
       role: { $in: ["ADMIN", "SUPER ADMIN"] },
     });
 
-    // console.log("Found user:", user);
+    console.log("Found user:", user);
 
     if (!user) {
       return NextResponse.json(

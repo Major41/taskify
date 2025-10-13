@@ -210,7 +210,7 @@ export default function TaskersPage() {
       </div>
 
       {/* Tasker Statistics */}
-      {stats && <TaskerStatsCards stats={stats} />}
+      {/* {stats && <TaskerStatsCards stats={stats} />} */}
 
       {/* Taskers Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">

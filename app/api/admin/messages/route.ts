@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { db } = await connectToDatabase();
 
@@ -92,6 +93,64 @@ export async function POST(request: Request) {
       {
         success: false,
         message: "Failed to send message",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Message ID is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { db } = await connectToDatabase();
+
+    // Validate if the ID is a valid ObjectId
+    if (!ObjectId.isValid(id)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid message ID",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await db.collection("adminmessages").deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Message not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Message deleted successfully",
+    });
+  } catch (error) {
+    console.error("Message delete error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete message",
       },
       { status: 500 }
     );

@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function GET() {
   try {
     const { db } = await connectToDatabase();
 
-    // Fetch all tasker applications with user information
-    const applications = await db
-      .collection("taskerapplications")
+    // Fetch all taskers that are not approved yet
+    const taskers = await db
+      .collection("taskers")
       .aggregate([
+        {
+          $match: {
+            is_approved: false, // Only show unapproved taskers
+          },
+        },
         {
           $lookup: {
             from: "users",
-            localField: "userId",
+            localField: "_id",
             foreignField: "_id",
             as: "userInfo",
           },
@@ -25,26 +31,38 @@ export async function GET() {
         },
         {
           $project: {
+            _id: 1,
             user: {
               _id: "$userInfo._id",
-              name: "$userInfo.name",
+              name: "$userInfo.first_name",
               phone: "$userInfo.phone_number",
               email: "$userInfo.email",
-              avatar_url: "$userInfo.avatar_url",
+              avatar_url: "$userInfo.profile_url",
             },
-            about: 1,
+            about: "$tasker_about",
             skills: 1,
-            idImages: 1,
-            workImages: 1,
-            status: 1,
-            appliedAt: 1,
-            reviewedAt: 1,
-            reviewedBy: 1,
-            rejectionReason: 1,
-            category: 1,
-            experience: 1,
+            idImages: {
+              passport: "$passport_photo",
+              id_front: "$id_card_front",
+              id_back: "$id_card_back",
+            },
+            workImages: "$job_images",
+            status: {
+              $cond: {
+                if: { $eq: ["$is_approved", true] },
+                then: "approved",
+                else: "pending",
+              },
+            },
+            appliedAt: "$tasker_reg_date",
+            category: { $arrayElemAt: ["$skills.category_name", 0] },
+            experience: { $arrayElemAt: ["$skills.skill_experience", 0] },
+            hourlyRate: { $arrayElemAt: ["$skills.work_rate_amount", 0] },
             location: 1,
-            hourlyRate: 1,
+            averageRating: "$tasker_average_rating",
+            completedTasks: "$tasker_complete_tasks",
+            is_accepting_requests: 1,
+            respond_time: 1,
           },
         },
         {
@@ -55,7 +73,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: applications,
+      data: taskers,
       message: "Applications fetched successfully",
     });
   } catch (error) {

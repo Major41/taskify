@@ -15,37 +15,25 @@ export async function POST(request: Request) {
 
     const { db } = await connectToDatabase();
 
-    // Update application status
-    const applicationResult = await db
-      .collection("taskerapplications")
-      .updateOne(
-        { _id: new ObjectId(applicationId) },
-        {
-          $set: {
-            status: "approved",
-            reviewedAt: new Date(),
-            // You can add reviewedBy with admin user ID
-          },
-        }
-      );
+    // Update the tasker's is_approved status to true
+    const result = await db.collection("taskers").updateOne(
+      { _id: new ObjectId(applicationId) },
+      {
+        $set: {
+          is_approved: true,
+          reviewedAt: new Date().toISOString(),
+        },
+      }
+    );
 
-    if (applicationResult.modifiedCount === 0) {
+    if (result.modifiedCount === 0) {
       return NextResponse.json(
-        { success: false, message: "Application not found" },
+        {
+          success: false,
+          message: "Application not found or already approved",
+        },
         { status: 404 }
       );
-    }
-
-    // Get application to update user role
-    const application = await db.collection("taskerapplications").findOne({
-      _id: new ObjectId(applicationId),
-    });
-
-    if (application) {
-      // Update user role to tasker
-      await db
-        .collection("users")
-        .updateOne({ _id: application.userId }, { $set: { role: "tasker" } });
     }
 
     return NextResponse.json({
@@ -53,9 +41,9 @@ export async function POST(request: Request) {
       message: "Application approved successfully",
     });
   } catch (error) {
-    console.error("Application approval error:", error);
+    console.error("Approve application error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to approve application" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }

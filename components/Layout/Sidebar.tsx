@@ -33,6 +33,7 @@ const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Task Orders", icon: ClipboardList },
   { href: "/payments", label: "Payments", icon: CreditCard },
+  { href: "/withdrawals", label: "Withdrawals", icon: CreditCard },
   { href: "/applications", label: "Applications", icon: FileText },
   { href: "/verification", label: "Verification", icon: ShieldCheck },
   { href: "/taskers", label: "Taskers", icon: Users },
@@ -119,7 +120,7 @@ export default function Sidebar({ children }: SidebarProps) {
               Main Menu
             </h3>
             <div className="space-y-1">
-              {menuItems.slice(0, 5).map((item) => {
+              {menuItems.slice(0, 6).map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
                 return (
@@ -158,7 +159,7 @@ export default function Sidebar({ children }: SidebarProps) {
               Management
             </h3>
             <div className="space-y-1">
-              {menuItems.slice(5, 8).map((item) => {
+              {menuItems.slice(6, 9).map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
                 return (
@@ -197,30 +198,7 @@ export default function Sidebar({ children }: SidebarProps) {
 
         {/* Footer Section */}
         <div className="p-4 border-t border-gray-200/60 bg-white/50 backdrop-blur-sm">
-          {/* User Profile */}
-          <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100/50 mb-4">
-            <div className="relative">
-              <Image
-                src="/izoh.jpg"
-                alt="Profile"
-                width={40}
-                height={40}
-                className="rounded-lg border-2 border-white shadow-sm"
-              />
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white"></div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {currentUser.name}
-              </p>
-              <div className="flex items-center space-x-1">
-                <Crown className="w-3 h-3 text-amber-500" />
-                <p className="text-xs text-gray-600 font-medium">
-                  {currentUser.role}
-                </p>
-              </div>
-            </div>
-          </div>
+
 
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -238,15 +216,6 @@ export default function Sidebar({ children }: SidebarProps) {
               <LogOut className="w-4 h-4" />
               <span className="text-xs font-medium">Logout</span>
             </button>
-          </div>
-
-          {/* Help & Support */}
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <button className="flex items-center space-x-1 hover:text-gray-700 transition-colors">
-              <HelpCircle className="w-3 h-3" />
-              <span>Help</span>
-            </button>
-            <div className="text-gray-400">v2.1.0</div>
           </div>
         </div>
       </aside>

@@ -208,7 +208,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Client Statistics */}
-      {stats && <ClientStatsCards stats={stats} />}
+      {/* {stats && <ClientStatsCards stats={stats} />} */}
 
       {/* Clients Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">

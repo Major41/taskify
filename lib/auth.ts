@@ -44,7 +44,7 @@ export const authService = {
     if (data.success && data.user) {
       localStorage.setItem("tasksfyUser", JSON.stringify(data.user));
       console.log("User stored in localStorage");
-      console.log("Stored user:", data.user);
+      // console.log("Stored user:", data.user);
     }
 
     return data;
