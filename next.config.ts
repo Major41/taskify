@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    domains: [
+      "192.168.225.93",
+      "localhost",
+      "127.0.0.1",
+      "tasksfy.com",
+      // Add other domains you use for images
+    ],
     remotePatterns: [
       {
         protocol: "http",
@@ -18,6 +25,13 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "tasksfy.com",
+        pathname: "/api/**",
+      },
+      {
+        protocol: "http",
+        hostname: "192.168.225.93",
+        port: "8080",
+        pathname: "/image_3_pictures/**",
       },
       {
         protocol: "http",

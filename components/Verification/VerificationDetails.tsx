@@ -9,9 +9,9 @@ import {
   Users,
   Shield,
   Camera,
-  Upload,
   FileText,
   Download,
+  Eye,
 } from "lucide-react";
 import { VerificationRequest, VerificationStage } from "@/types/verification";
 
@@ -36,7 +36,18 @@ export default function VerificationDetails({
   onStageRejection,
   onFinalVerification,
 }: VerificationDetailsProps) {
-  const [showCamera, setShowCamera] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+
+  const openImageViewer = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setSelectedImage(null);
+  };
 
   const handleStageAction = async (
     stage: VerificationStage,
@@ -105,6 +116,97 @@ export default function VerificationDetails({
     link.click();
     document.body.removeChild(link);
   };
+
+  // Get identification images for stage 3
+  const getIdentificationImages = () => {
+    return [
+      {
+        url: verification.identification_images?.passport,
+        label: "Passport Photo",
+        type: "passport",
+      },
+      {
+        url: verification.identification_images?.id_front,
+        label: "ID Front",
+        type: "id_front",
+      },
+      {
+        url: verification.identification_images?.id_back,
+        label: "ID Back",
+        type: "id_back",
+      },
+    ].filter((img) => img.url && !img.url.includes("null"));
+  };
+
+  // Get work images for stage 4
+  const getWorkImages = () => {
+    return (
+      verification.work_images
+        ?.filter((img) => img && !img.includes("null"))
+        .map((img, index) => ({
+          url: img,
+          label: `Work Sample ${index + 1}`,
+          type: "work",
+        })) || []
+    );
+  };
+
+  // Get all images for final verification
+  const getAllImages = () => {
+    return [...getIdentificationImages(), ...getWorkImages()];
+  };
+
+  // Image display component with action buttons
+  const ImageWithActions = ({
+    image,
+    stage,
+    showActions = true,
+  }: {
+    image: { url: string; label: string; type: string };
+    stage: VerificationStage;
+    showActions?: boolean;
+  }) => (
+    <div className="border border-gray-200 rounded-lg p-4 bg-white">
+      <div className="text-center mb-3">
+        <h5 className="font-medium text-gray-900 mb-2">{image.label}</h5>
+        <div
+          className="cursor-pointer transform transition-transform hover:scale-105 mx-auto max-w-xs"
+          onClick={() => openImageViewer(image.url)}
+        >
+          <Image
+            src={image.url}
+            alt={image.label}
+            width={300}
+            height={200}
+            className="rounded-lg border object-cover w-full h-48"
+          />
+          <div className="mt-2 flex items-center justify-center text-blue-600 text-sm">
+            <Eye className="w-4 h-4 mr-1" />
+            Click to view larger
+          </div>
+        </div>
+      </div>
+
+      {showActions && getStageStatus(stage) === "pending" && (
+        <div className="flex gap-2 justify-center mt-3">
+          <button
+            onClick={() => handleStageAction(stage, true)}
+            className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+          >
+            <CheckCircle className="w-4 h-4 mr-1" />
+            Approve
+          </button>
+          <button
+            onClick={() => handleStageAction(stage, false)}
+            className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            <XCircle className="w-4 h-4 mr-1" />
+            Reject
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -186,7 +288,7 @@ export default function VerificationDetails({
       <div className="space-y-6">
         {/* Stage 3 - Facial Verification */}
         <div className="border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h4 className="text-lg font-semibold text-gray-900 flex items-center">
               <UserCheck className="w-5 h-5 mr-2 text-blue-600" />
               Facial Verification (Stage 3)
@@ -205,43 +307,29 @@ export default function VerificationDetails({
           </div>
 
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-              <div className="text-center">
-                {verification.stages.stage3.facialImage ? (
-                  <Image
-                    src={verification.stages.stage3.facialImage}
-                    alt="Facial verification"
-                    width={200}
-                    height={200}
-                    className="rounded-lg mx-auto"
-                  />
-                ) : (
-                  <div className="py-8">
-                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">No facial image uploaded</p>
-                  </div>
-                )}
-              </div>
+            <div>
+              <h5 className="font-medium text-gray-900 mb-4">
+                Identification Documents
+              </h5>
+              {getIdentificationImages().length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getIdentificationImages().map((image, index) => (
+                    <ImageWithActions
+                      key={index}
+                      image={image}
+                      stage="stage3"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500">
+                    No identification documents uploaded
+                  </p>
+                </div>
+              )}
             </div>
-
-            {getStageStatus("stage3") === "pending" && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleStageAction("stage3", true)}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Stage 3
-                </button>
-                <button
-                  onClick={() => handleStageAction("stage3", false)}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Decline Stage 3
-                </button>
-              </div>
-            )}
 
             {verification.stages.stage3.rejectionReason && (
               <div className="bg-red-50 border-l-4 border-red-400 p-4">
@@ -256,7 +344,7 @@ export default function VerificationDetails({
 
         {/* Stage 4 - Referral Verification */}
         <div className="border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h4 className="text-lg font-semibold text-gray-900 flex items-center">
               <Users className="w-5 h-5 mr-2 text-purple-600" />
               Referral Verification (Stage 4)
@@ -274,7 +362,28 @@ export default function VerificationDetails({
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Work Samples */}
+            <div>
+              <h5 className="font-medium text-gray-900 mb-4">Work Samples</h5>
+              {getWorkImages().length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getWorkImages().map((image, index) => (
+                    <ImageWithActions
+                      key={index}
+                      image={image}
+                      stage="stage4"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500">No work samples uploaded</p>
+                </div>
+              )}
+            </div>
+
             {/* Referrals */}
             <div className="space-y-3">
               <h5 className="font-medium text-gray-900">
@@ -334,25 +443,6 @@ export default function VerificationDetails({
               </div>
             </div>
 
-            {getStageStatus("stage4") === "pending" && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleStageAction("stage4", true)}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Stage 4
-                </button>
-                <button
-                  onClick={() => handleStageAction("stage4", false)}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Decline Stage 4
-                </button>
-              </div>
-            )}
-
             {verification.stages.stage4.rejectionReason && (
               <div className="bg-red-50 border-l-4 border-red-400 p-4">
                 <p className="text-red-700">
@@ -366,7 +456,7 @@ export default function VerificationDetails({
 
         {/* Final Verification */}
         <div className="border-2 border-yellow-400 rounded-lg p-6 bg-yellow-50">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h4 className="text-lg font-semibold text-gray-900 flex items-center">
               <Shield className="w-5 h-5 mr-2 text-yellow-600" />
               Final Verification
@@ -389,7 +479,7 @@ export default function VerificationDetails({
             </div>
           </div>
 
-          <div className="bg-white border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="bg-white border-l-4 border-yellow-400 p-4 mb-6">
             <p className="text-gray-700">
               This is the final and most important verification step. Approval
               here will fully verify the tasker and grant them access to the
@@ -397,8 +487,54 @@ export default function VerificationDetails({
             </p>
           </div>
 
+          {/* All Images for Final Review */}
+          <div>
+            <h5 className="font-medium text-gray-900 mb-4">
+              All Verification Materials
+            </h5>
+            {getAllImages().length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getAllImages().map((image, index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg p-4 bg-white"
+                  >
+                    <div className="text-center mb-3">
+                      <h5 className="font-medium text-gray-900 mb-2">
+                        {image.label}
+                      </h5>
+                      <div
+                        className="cursor-pointer transform transition-transform hover:scale-105 mx-auto max-w-xs"
+                        onClick={() => openImageViewer(image.url)}
+                      >
+                        <Image
+                          src={image.url}
+                          alt={image.label}
+                          width={300}
+                          height={200}
+                          className="rounded-lg border object-cover w-full h-48"
+                        />
+                        <div className="mt-2 flex items-center justify-center text-blue-600 text-sm">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Click to view larger
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">
+                  No verification materials available
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Stage Status Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
             <div
               className={`p-3 rounded-lg text-center ${
                 getStageStatus("stage3") === "approved"
@@ -475,6 +611,28 @@ export default function VerificationDetails({
           )}
         </div>
       </div>
+
+      {/* Full Screen Image Viewer */}
+      {imageViewerOpen && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+          <button
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <XCircle className="w-8 h-8" />
+          </button>
+          <div className="max-w-4xl max-h-[80vh] flex items-center justify-center">
+            <Image
+              src={selectedImage}
+              alt="Verification Image"
+              width={1200}
+              height={800}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              priority
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
