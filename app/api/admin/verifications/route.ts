@@ -179,9 +179,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const query = { _id: taskerId };
+
+
     // Update the verification status in users collection
     const result = await db.collection("users").updateOne(
-      { _id: new ObjectId(taskerId) },
+      query,
       {
         $set: {
           [verificationField]: "Verified",
