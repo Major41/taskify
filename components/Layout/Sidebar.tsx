@@ -195,9 +195,9 @@ export default function Sidebar({ children }: SidebarProps) {
         </nav>
 
         {/* Footer Section */}
-        <div className="p-4 border-t border-gray-200/60 bg-[#05A243] backdrop-blur-sm">
+        <div className="p-2 border-t border-gray-200/60 bg-[#05A243] backdrop-blur-sm">
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <Link
               href="/admin-approval"
               className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
