@@ -1,18 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader2,
-  Search,
-  Filter,
-  DollarSign,
-  User,
-  Phone,
-  Calendar,
-} from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Loader2, User } from "lucide-react";
 
 interface WithdrawalRequest {
   _id: string;
@@ -40,9 +29,8 @@ export default function AdminWithdrawalsPage() {
     type: "success" | "error";
     message: string;
   } | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<
-    "all" | "pending" | "approved"
+    "all" | "pending" | "processed"
   >("all");
 
   useEffect(() => {
@@ -154,30 +142,19 @@ export default function AdminWithdrawalsPage() {
     }
   };
 
-  // Filter withdrawals based on search and status
+  // Filter withdrawals based on status
   const filteredWithdrawals = withdrawals.filter((withdrawal) => {
-    const matchesSearch =
-      withdrawal.user?.first_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      withdrawal.user?.last_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      withdrawal.user?.email
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      withdrawal.phoneNumber.includes(searchTerm);
-
     const matchesStatus =
       filterStatus === "all" ||
       (filterStatus === "pending" && !withdrawal.isPaymentApproved) ||
-      (filterStatus === "approved" && withdrawal.isPaymentApproved);
+      (filterStatus === "processed" && withdrawal.isPaymentApproved);
 
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const pendingCount = withdrawals.filter((w) => !w.isPaymentApproved).length;
-  const approvedCount = withdrawals.filter((w) => w.isPaymentApproved).length;
+  const processedCount = withdrawals.filter((w) => w.isPaymentApproved).length;
+  const allCount = withdrawals.length;
 
   if (loading) {
     return (
@@ -218,6 +195,11 @@ export default function AdminWithdrawalsPage() {
         </div>
 
         <div className="flex items-center space-x-4 mt-4 sm:mt-0">
+          <div className="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+            <span className="text-blue-800 text-sm font-medium">
+              All: {allCount}
+            </span>
+          </div>
           <div className="bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-200">
             <span className="text-yellow-800 text-sm font-medium">
               Pending: {pendingCount}
@@ -225,189 +207,263 @@ export default function AdminWithdrawalsPage() {
           </div>
           <div className="bg-green-50 px-3 py-2 rounded-lg border border-green-200">
             <span className="text-green-800 text-sm font-medium">
-              Approved: {approvedCount}
+              Processed: {processedCount}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Search and Filter */}
+      {/* Filter Buttons */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Filter */}
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={filterStatus}
-              onChange={(e) =>
-                setFilterStatus(
-                  e.target.value as "all" | "pending" | "approved"
-                )
-              }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Requests</option>
-              <option value="pending">Pending Only</option>
-              <option value="approved">Approved Only</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Withdrawals List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Withdrawal Requests ({filteredWithdrawals.length})
-          </h2>
-        </div>
-
-        <div className="divide-y divide-gray-200">
-          {filteredWithdrawals.length > 0 ? (
-            filteredWithdrawals.map((withdrawal) => (
-              <div
-                key={withdrawal._id}
-                className="p-6 hover:bg-gray-50 transition-colors"
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 sm:mb-0">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Filter by status:
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterStatus("all")}
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === "all"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  {/* User Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="flex-shrink-0">
-                        {withdrawal.user?.profile_url ? (
-                          <img
-                            src={withdrawal.user.profile_url}
-                            alt={`${withdrawal.user.first_name} ${withdrawal.user.last_name}`}
-                            className="h-12 w-12 rounded-full"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
-                            <User className="h-6 w-6 text-gray-600" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {withdrawal.user?.first_name}{" "}
-                          {withdrawal.user?.last_name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {withdrawal.user?.email}
-                        </p>
-                      </div>
-                    </div>
+                All Payments
+                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                  {allCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterStatus("pending")}
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === "pending"
+                    ? "bg-yellow-600 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Pending Payments
+                <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
+                  {pendingCount}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterStatus("processed")}
+                className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === "processed"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                Processed Payments
+                <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                  {processedCount}
+                </span>
+              </button>
+            </div>
+          </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">
-                          {withdrawal.phoneNumber}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600 font-medium">
-                          KES {withdrawal.withdrawAmount.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">
-                          {new Date(
-                            withdrawal.dateOfPaymentRequest
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            withdrawal.isPaymentApproved
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {withdrawal.isPaymentApproved
-                            ? "Approved"
-                            : "Pending"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* MPESA Code if approved */}
-                    {withdrawal.isPaymentApproved && withdrawal.mpesaCode && (
-                      <div className="mt-3">
-                        <span className="text-sm text-gray-600">
-                          MPESA Code: <strong>{withdrawal.mpesaCode}</strong>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  {!withdrawal.isPaymentApproved && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleApprove(withdrawal._id)}
-                        disabled={approving === withdrawal._id}
-                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {approving === withdrawal._id ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        )}
-                        {approving === withdrawal._id
-                          ? "Approving..."
-                          : "Approve"}
-                      </button>
-                      <button
-                        onClick={() => handleReject(withdrawal._id)}
-                        disabled={rejecting === withdrawal._id}
-                        className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {rejecting === withdrawal._id ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <XCircle className="h-4 w-4 mr-2" />
-                        )}
-                        {rejecting === withdrawal._id
-                          ? "Rejecting..."
-                          : "Reject"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-12 text-center">
-              <div className="flex flex-col items-center justify-center">
-                <DollarSign className="h-16 w-16 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No withdrawal requests found
-                </h3>
-                <p className="text-gray-500">
-                  {searchTerm || filterStatus !== "all"
-                    ? "Try adjusting your search or filter criteria"
-                    : "All withdrawal requests have been processed"}
-                </p>
-              </div>
+          {/* Active Filter Indicator */}
+          {filterStatus !== "all" && (
+            <div className="flex items-center">
+              <span className="text-sm text-gray-500 mr-2">
+                Showing:{" "}
+                <span className="font-medium text-gray-700">
+                  {filterStatus === "pending" ? "Pending" : "Processed"}{" "}
+                  payments
+                </span>
+              </span>
+              <button
+                onClick={() => setFilterStatus("all")}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear filter
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Withdrawals Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tasker
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Phone Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date Requested
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredWithdrawals.length > 0 ? (
+                filteredWithdrawals.map((withdrawal) => (
+                  <tr key={withdrawal._id} className="hover:bg-gray-50">
+                    {/* Tasker Profile and Name */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {withdrawal.user?.profile_url ? (
+                            <img
+                              src={withdrawal.user.profile_url}
+                              alt={`${withdrawal.user.first_name} ${withdrawal.user.last_name}`}
+                              className="h-10 w-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                              <User className="h-5 w-5 text-gray-600" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {withdrawal.user?.first_name}{" "}
+                            {withdrawal.user?.last_name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {withdrawal.user?.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Phone Number */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {withdrawal.phoneNumber}
+                      </div>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        KES {withdrawal.withdrawAmount.toLocaleString()}
+                      </div>
+                    </td>
+
+                    {/* Date Requested */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(
+                          withdrawal.dateOfPaymentRequest
+                        ).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(
+                          withdrawal.dateOfPaymentRequest
+                        ).toLocaleTimeString()}
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          withdrawal.isPaymentApproved
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {withdrawal.isPaymentApproved ? "Processed" : "Pending"}
+                      </span>
+                      {withdrawal.isPaymentApproved && withdrawal.mpesaCode && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Code: {withdrawal.mpesaCode}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {!withdrawal.isPaymentApproved ? (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleApprove(withdrawal._id)}
+                            disabled={approving === withdrawal._id}
+                            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                          >
+                            {approving === withdrawal._id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            )}
+                            {approving === withdrawal._id ? "..." : "Approve"}
+                          </button>
+                          <button
+                            onClick={() => handleReject(withdrawal._id)}
+                            disabled={rejecting === withdrawal._id}
+                            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
+                          >
+                            {rejecting === withdrawal._id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <XCircle className="h-3 w-3 mr-1" />
+                            )}
+                            {rejecting === withdrawal._id ? "..." : "Reject"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Completed</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <User className="h-12 w-12 text-gray-300 mb-3" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">
+                        No withdrawal requests found
+                      </h3>
+                      <p className="text-gray-500 max-w-md">
+                        {filterStatus !== "all"
+                          ? `No ${filterStatus} withdrawal requests found.`
+                          : "No withdrawal requests have been made yet."}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Table Footer Info */}
+      {filteredWithdrawals.length > 0 && (
+        <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+          <div>
+            Showing {filteredWithdrawals.length} of {withdrawals.length}{" "}
+            requests
+          </div>
+          <div className="flex space-x-4">
+            <span className="flex items-center">
+              <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded-full mr-1"></div>
+              Pending: {pendingCount}
+            </span>
+            <span className="flex items-center">
+              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded-full mr-1"></div>
+              Processed: {processedCount}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

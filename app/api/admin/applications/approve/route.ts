@@ -15,9 +15,13 @@ export async function POST(request: Request) {
 
     const { db } = await connectToDatabase();
 
-    // Update the tasker's is_approved status to true
+    // Use the query variable consistently
+    const query = { _id: applicationId };
+
+
+    // Update the tasker's is_approved status to true using the query
     const result = await db.collection("taskers").updateOne(
-      { _id: new ObjectId(applicationId) },
+      query, // Use the query variable here
       {
         $set: {
           is_approved: true,
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: false,
       message: "Application approved successfully",
     });
   } catch (error) {

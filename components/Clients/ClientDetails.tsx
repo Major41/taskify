@@ -71,7 +71,7 @@ export default function ClientDetails({
   };
 
   return (
-    <div className="tasker-details-flex">
+    <div className="tasker-details-flex flex" >
       <div className="tasker-details-left">
         <div className="about-info">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">

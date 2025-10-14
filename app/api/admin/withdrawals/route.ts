@@ -89,28 +89,37 @@ export async function PUT(request: Request) {
 
     const { db } = await connectToDatabase();
 
-    // Validate if the ID is a valid ObjectId
-    if (!ObjectId.isValid(withdrawalId)) {
+    console.log("Looking for withdrawal ID:", withdrawalId);
+
+    // Since your _id fields are strings, use the string directly
+    const query = { _id: withdrawalId };
+
+    // Verify the document exists
+    const existingRequest = await db
+      .collection("withdrawPaymentRequests")
+      .findOne(query);
+
+    if (!existingRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid withdrawal ID",
+          message: "Withdrawal request not found",
         },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
+    console.log("Found withdrawal request:", existingRequest);
+
     if (action === "approve") {
-      // Generate a mock MPESA code (in real implementation, you'd call MPESA API)
+      // Generate a mock MPESA code
       const mpesaCode = `MPE${Math.random()
         .toString(36)
         .substr(2, 9)
         .toUpperCase()}`;
 
       const result = await db.collection("withdrawPaymentRequests").updateOne(
-        {
-          _id: new ObjectId(withdrawalId),
-        },
+        query, // Use the string query, NOT ObjectId
         {
           $set: {
             isPaymentApproved: true,
@@ -124,9 +133,9 @@ export async function PUT(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "Withdrawal request not found",
+            message: "Failed to update withdrawal request",
           },
-          { status: 404 }
+          { status: 500 }
         );
       }
 
@@ -139,18 +148,18 @@ export async function PUT(request: Request) {
         message: "Withdrawal approved successfully",
       });
     } else if (action === "reject") {
-      // For rejection, we'll delete the request
-      const result = await db.collection("withdrawPaymentRequests").deleteOne({
-        _id: new ObjectId(withdrawalId),
-      });
+      // For rejection, delete the request
+      const result = await db
+        .collection("withdrawPaymentRequests")
+        .deleteOne(query);
 
       if (result.deletedCount === 0) {
         return NextResponse.json(
           {
             success: false,
-            message: "Withdrawal request not found",
+            message: "Failed to delete withdrawal request",
           },
-          { status: 404 }
+          { status: 500 }
         );
       }
 

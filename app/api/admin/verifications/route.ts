@@ -30,6 +30,12 @@ export async function GET() {
           },
         },
         {
+          $match: {
+            // Only fetch verifications where stage 3 is Pending
+            "userInfo.verification_level3_status": "Pending",
+          },
+        },
+        {
           $project: {
             _id: 1,
             tasker: {
@@ -77,7 +83,7 @@ export async function GET() {
                         {
                           $eq: [
                             "$userInfo.verification_level3_status",
-                            "Unverified",
+                            "Pending",
                           ],
                         },
                         {

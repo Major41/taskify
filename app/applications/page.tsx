@@ -32,6 +32,12 @@ export default function ApplicationsPage() {
     filterApplications();
   }, [applications, searchQuery, selectedStatus]);
 
+  // Helper function to get status from is_approved field
+  const getApplicationStatus = (application) => {
+    console.log("Application is_approved:", application);
+    return application.is_approved ? "approved" : "pending";
+  };
+
   const loadApplications = async () => {
     try {
       setLoading(true);
@@ -58,11 +64,12 @@ export default function ApplicationsPage() {
   const filterApplications = () => {
     let filtered = applications;
 
-    // Filter by status
+    // Filter by status - use is_approved field to determine status
     if (selectedStatus !== "all") {
-      filtered = filtered.filter(
-        (application) => application.status === selectedStatus
-      );
+      filtered = filtered.filter((application) => {
+        const status = getApplicationStatus(application);
+        return status === selectedStatus;
+      });
     }
 
     // Filter by search query
@@ -70,9 +77,9 @@ export default function ApplicationsPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (application) =>
-          application.user.name.toLowerCase().includes(query) ||
-          application.user.phone.toLowerCase().includes(query) ||
-          application.user.email.toLowerCase().includes(query) ||
+          application.user?.name?.toLowerCase().includes(query) ||
+          application.user?.phone?.toLowerCase().includes(query) ||
+          application.user?.email?.toLowerCase().includes(query) ||
           (application.skills &&
             application.skills.some(
               (skill) =>

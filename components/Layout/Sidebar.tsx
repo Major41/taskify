@@ -32,10 +32,10 @@ interface SidebarProps {
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Task Orders", icon: ClipboardList },
-  { href: "/payments", label: "Payments", icon: CreditCard },
-  { href: "/withdrawals", label: "Withdrawals", icon: CreditCard },
-  { href: "/applications", label: "Applications", icon: FileText },
-  { href: "/verification", label: "Verification", icon: ShieldCheck },
+  { href: "/withdrawals", label: "Payments Request", icon: CreditCard },
+  { href: "/records", label: "Mpesa Records", icon: FileText },
+  { href: "/applications", label: "Application Request", icon: FileText },
+  { href: "/verification", label: "Verification Request", icon: ShieldCheck },
   { href: "/taskers", label: "Taskers", icon: Users },
   { href: "/clients", label: "Clients", icon: UserCheck },
   { href: "/messages", label: "Messages", icon: MessageSquare },
@@ -82,7 +82,7 @@ export default function Sidebar({ children }: SidebarProps) {
       `}
       >
         {/* Header Section */}
-        <div className="p-6 border-b border-gray-200/60">
+        <div className="p-4 border-b bg-[#05A243]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="relative">
@@ -96,10 +96,10 @@ export default function Sidebar({ children }: SidebarProps) {
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold text-white bg-clip-text">
                   Tasksfy
                 </h1>
-                <p className="text-xs text-gray-500 font-medium">Admin Panel</p>
+                <p className="text-xs text-white font-medium">Admin Panel</p>
               </div>
             </div>
 
@@ -114,7 +114,7 @@ export default function Sidebar({ children }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 bg-green-500 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 bg-[#05A243] overflow-y-auto">
           <div className="px-2 py-3">
             <h3 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">
               Main Menu
@@ -146,7 +146,7 @@ export default function Sidebar({ children }: SidebarProps) {
                     />
                     <span className="font-medium text-sm">{item.label}</span>
                     {isActive && (
-                      <div className="ml-auto w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="ml-auto w-2 h-2 bg-[#05A243] rounded-full"></div>
                     )}
                   </Link>
                 );
@@ -192,26 +192,22 @@ export default function Sidebar({ children }: SidebarProps) {
               })}
             </div>
           </div>
-
-         
         </nav>
 
         {/* Footer Section */}
-        <div className="p-4 border-t border-gray-200/60 bg-white/50 backdrop-blur-sm">
-
-
+        <div className="p-4 border-t border-gray-200/60 bg-[#05A243] backdrop-blur-sm">
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             <Link
               href="/admin-approval"
-              className="flex items-center justify-center space-x-2 px-3 py-2 bg-amber-500/10 text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
+              className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
             >
               <Crown className="w-4 h-4" />
               <span className="text-xs font-medium">Approve Admin</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center justify-center space-x-2 px-3 py-2 bg-red-500/10 text-red-700 rounded-lg hover:bg-red-500/20 transition-all duration-200 group border border-red-200/50"
+              className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-red-700 rounded-lg hover:bg-red-500/20 transition-all duration-200 group border border-red-200/50"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-xs font-medium">Logout</span>
@@ -271,7 +267,7 @@ export default function Sidebar({ children }: SidebarProps) {
                       alt="Profile"
                       width={40}
                       height={40}
-                      className="rounded-xl border-2 border-white shadow-sm"
+                      className="rounded-full border-2 border-white shadow-sm"
                     />
                     <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                   </div>

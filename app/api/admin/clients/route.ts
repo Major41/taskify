@@ -16,9 +16,9 @@ export async function GET() {
         },
         {
           $lookup: {
-            from: "acceptedrequests",
+            from: "acceptedRequests",
             localField: "_id",
-            foreignField: "client",
+            foreignField: "user_id",
             as: "clientRequests",
           },
         },
@@ -26,7 +26,7 @@ export async function GET() {
           $lookup: {
             from: "reviews",
             localField: "_id",
-            foreignField: "client_id",
+            foreignField: "recipientId",
             as: "reviews",
           },
         },
@@ -81,7 +81,7 @@ export async function GET() {
                 $filter: {
                   input: "$clientRequests",
                   as: "request",
-                  cond: { $eq: ["$$request.task_status", "ongoing"] },
+                  cond: { $eq: ["$$request.task_status", "Ongoing"] },
                 },
               },
             },
@@ -90,7 +90,7 @@ export async function GET() {
                 $filter: {
                   input: "$clientRequests",
                   as: "request",
-                  cond: { $eq: ["$$request.task_status", "completed"] },
+                  cond: { $eq: ["$$request.task_status", "Completed"] },
                 },
               },
             },
@@ -99,7 +99,7 @@ export async function GET() {
                 $filter: {
                   input: "$clientRequests",
                   as: "request",
-                  cond: { $eq: ["$$request.task_status", "canceled"] },
+                  cond: { $eq: ["$$request.task_status", "Canceled"] },
                 },
               },
             },
@@ -108,7 +108,7 @@ export async function GET() {
                 $filter: {
                   input: "$clientRequests",
                   as: "request",
-                  cond: { $eq: ["$$request.task_status", "expired"] },
+                  cond: { $eq: ["$$request.task_status", "Expired"] },
                 },
               },
             },
@@ -120,10 +120,10 @@ export async function GET() {
                 as: "review",
                 in: {
                   _id: "$$review._id",
-                  comment: "$$review.comment",
-                  rating: "$$review.rating",
-                  createdAt: "$$review.createdAt",
-                  tasker: "$$review.tasker_name",
+                  comment: "$$review.feedback",
+                  rating: "$$review.feedbackRatingStar",
+                  createdAt: "$$review.feedbackDate",
+                  client: "$$review.senderFName",
                 },
               },
             },

@@ -69,10 +69,18 @@ export default function VerificationTable({
     });
   };
 
-  const getVerificationStatus = (stage, verification) => {
-    const status = verification.verification_stages?.[stage];
-    return status === "Verified" ? "Verified" : "Unverified";
-  };
+const getVerificationStatus = (stage, verification) => {
+  const status = verification.verification_stages?.[stage];
+
+  // Handle different status values properly
+  if (status === "Verified") {
+    return "Verified";
+  } else if (status === "Pending") {
+    return "Pending";
+  } else {
+    return "Unverified";
+  }
+};
 
   // Open image viewer with specific image
   const openImageViewer = (imageUrl, imageType = "work", index = 0) => {
@@ -115,6 +123,7 @@ export default function VerificationTable({
 
   // Get images for specific stage
   const getStageImages = (stage, verification) => {
+    console.log(verification.identification_images);
     switch (stage) {
       case "stage3": // Facial Verification
         return [
@@ -224,9 +233,7 @@ export default function VerificationTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date of Application
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date Approved
-              </th>
+            
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
@@ -276,13 +283,7 @@ export default function VerificationTable({
                       {formatDate(verification.appliedAt)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {verification.overallStatus === "approved"
-                        ? formatDate(verification.updatedAt)
-                        : "N/A"}
-                    </div>
-                  </td>
+                 
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(verification.overallStatus)}
                   </td>
@@ -368,7 +369,7 @@ export default function VerificationTable({
                               {getVerificationStatus("stage3", verification)}
                             </span>
                             {getVerificationStatus("stage3", verification) ===
-                              "Unverified" && (
+                              "Pending" && (
                               <div className="space-x-2">
                                 <button
                                   onClick={() =>

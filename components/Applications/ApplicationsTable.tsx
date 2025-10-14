@@ -205,9 +205,7 @@ export default function ApplicationsTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date of Application
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date Approved
-              </th>
+             
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
@@ -252,13 +250,7 @@ export default function ApplicationsTable({
                     {formatDate(application.appliedAt)}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {application.status === "approved"
-                      ? formatDate(application.reviewedAt)
-                      : "N/A"}
-                  </div>
-                </td>
+               
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(application.status)}
                 </td>

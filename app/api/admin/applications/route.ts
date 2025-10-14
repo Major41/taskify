@@ -11,11 +11,6 @@ export async function GET() {
       .collection("taskers")
       .aggregate([
         {
-          $match: {
-            is_approved: false, // Only show unapproved taskers
-          },
-        },
-        {
           $lookup: {
             from: "users",
             localField: "_id",
@@ -59,6 +54,7 @@ export async function GET() {
             experience: { $arrayElemAt: ["$skills.skill_experience", 0] },
             hourlyRate: { $arrayElemAt: ["$skills.work_rate_amount", 0] },
             location: 1,
+            is_approved: 1,
             averageRating: "$tasker_average_rating",
             completedTasks: "$tasker_complete_tasks",
             is_accepting_requests: 1,

@@ -196,7 +196,7 @@ export default function AdminMessagesPage() {
         Messages and Updates
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="">
         {/* Left Column - Broadcast Messages */}
         <div className="lg:col-span-2 space-y-6">
           {/* General Message to All Users */}
@@ -274,81 +274,6 @@ export default function AdminMessagesPage() {
           </div>
         </div>
 
-        {/* Right Column - Messages List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center space-x-2">
-                <MessageCircle className="h-5 w-5 text-gray-700" />
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Messages
-                </h2>
-              </div>
-            </div>
-
-            <div className="max-h-[600px] overflow-y-auto">
-              {messages.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {messages.map((message) => (
-                    <div
-                      key={message._id}
-                      className="p-4 hover:bg-gray-50 transition-colors group relative"
-                    >
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => handleDeleteMessage(message._id)}
-                        disabled={deleting === message._id}
-                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                        title="Delete message"
-                      >
-                        {deleting === message._id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                      </button>
-
-                      <div className="flex items-start space-x-3 pr-6">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {message.userName}
-                            </p>
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                message.userType === "tasker"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}
-                            >
-                              {message.userType}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {message.message}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            {new Date(message.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        {!message.read && (
-                          <div className="flex-shrink-0">
-                            <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="h-32 flex flex-col items-center justify-center text-gray-500">
-                  <MessageCircle className="h-8 w-8 mb-2 text-gray-300" />
-                  <p className="text-sm">No messages yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

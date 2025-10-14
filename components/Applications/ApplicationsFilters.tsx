@@ -16,7 +16,6 @@ const statusTabs = [
   { value: "all", label: "All Applications" },
   { value: "pending", label: "Pending Applications" },
   { value: "approved", label: "Approved Applications" },
-  { value: "rejected", label: "Rejected Applications" },
 ];
 
 export default function ApplicationsFilters({

@@ -14,9 +14,11 @@ export async function POST(request: Request) {
     }
 
     const { db } = await connectToDatabase();
+    const query = { _id: applicationId };
+
 
     const result = await db.collection("taskerapplications").updateOne(
-      { _id: new ObjectId(applicationId) },
+      query,
       {
         $set: {
           status: "rejected",
