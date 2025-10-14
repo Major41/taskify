@@ -16,28 +16,50 @@ import { Client } from "@/types/client";
 
 interface ClientDetailsProps {
   client: Client;
-  onSendMessage: (clientId: string, message: string) => Promise<boolean>;
 }
 
-export default function ClientDetails({
-  client,
-  onSendMessage,
-}: ClientDetailsProps) {
+export default function ClientDetails({ client }: ClientDetailsProps) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim()) {
+      setError("Message cannot be empty");
+      return;
+    }
 
     setSending(true);
-    const success = await onSendMessage(client._id, message);
-    setSending(false);
+    setError("");
 
-    if (success) {
-      setSent(true);
-      setMessage("");
-      setTimeout(() => setSent(false), 3000);
+    try {
+      const response = await fetch("/api/admin/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: client._id,
+          message: message.trim(),
+          userType: "client", // Since this is a client details page
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSent(true);
+        setMessage("");
+        setTimeout(() => setSent(false), 3000);
+      } else {
+        setError(result.message || "Failed to send message");
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -71,7 +93,7 @@ export default function ClientDetails({
   };
 
   return (
-    <div className="tasker-details-flex flex" >
+    <div className="tasker-details-flex flex">
       <div className="tasker-details-left">
         <div className="about-info">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -185,10 +207,22 @@ export default function ClientDetails({
             id="client-message"
             rows={3}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setError(""); // Clear error when user starts typing
+            }}
             placeholder="I.e Hello, We are writing to inform you about important updates to our service terms..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical"
+            className="w-full px-3 text-black py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical"
           />
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-2 text-red-600 text-sm flex items-center">
+              <XCircle className="w-4 h-4 mr-1" />
+              {error}
+            </div>
+          )}
+
           <div className="flex justify-between items-center mt-3">
             <div>
               {sent && (
@@ -201,7 +235,7 @@ export default function ClientDetails({
             <button
               onClick={handleSendMessage}
               disabled={sending || !message.trim()}
-              className="send-message-btn bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="send-message-btn bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {sending ? "Sending..." : "Send Message"}
             </button>

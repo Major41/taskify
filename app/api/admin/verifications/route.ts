@@ -31,8 +31,11 @@ export async function GET() {
         },
         {
           $match: {
-            // Only fetch verifications where stage 3 is Pending
-            "userInfo.verification_level3_status": "Pending",
+            $or: [
+              { "userInfo.verification_level3_status": "Pending" },
+              { "userInfo.verification_level4_status": "Pending" },
+              { "userInfo.verification_level5_status": "Pending" },
+            ],
           },
         },
         {
@@ -89,13 +92,13 @@ export async function GET() {
                         {
                           $eq: [
                             "$userInfo.verification_level4_status",
-                            "Unverified",
+                            "Pending",
                           ],
                         },
                         {
                           $eq: [
                             "$userInfo.verification_level5_status",
-                            "Unverified",
+                            "Pending",
                           ],
                         },
                       ],

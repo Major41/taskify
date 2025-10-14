@@ -128,7 +128,6 @@ export default function VerificationTable({
 
   // Get images for specific stage
   const getStageImages = (stage, verification) => {
-    // console.log("Getting images for stage:", verification);
     switch (stage) {
       case "stage3": // Facial Verification
         return [
@@ -206,13 +205,10 @@ export default function VerificationTable({
     }
   };
 
-  // Image display component with action buttons
-  // Image display component with action buttons
-  const ImageWithActions = ({ image, stage, taskerId, showActions = true }) => {
+  // Image display component - removed action buttons from individual images
+  const ImageDisplay = ({ image }) => {
     const [imageError, setImageError] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
-
-    console.log("Rendering image:", image.url); // Debug log
 
     const handleImageError = (e) => {
       console.error("Image failed to load:", image.url, e);
@@ -226,9 +222,9 @@ export default function VerificationTable({
 
     return (
       <div className="border border-gray-200 rounded-lg p-4 bg-white">
-        <div className="text-center mb-3">
+        <div className="text-center">
           <h5 className="font-medium text-gray-900 mb-2">{image.label}</h5>
-          
+
           <div
             className="cursor-pointer transform transition-transform hover:scale-105 mx-auto max-w-xs"
             onClick={() =>
@@ -266,25 +262,6 @@ export default function VerificationTable({
             )}
           </div>
         </div>
-
-        {showActions && !imageError && imageLoaded && (
-          <div className="flex gap-2 justify-center mt-3">
-            <button
-              onClick={() => handleStageApproval(taskerId, stage)}
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-            >
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Approve
-            </button>
-            <button
-              onClick={() => handleFinalAction(taskerId, false)}
-              className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-            >
-              <XCircle className="w-4 h-4 mr-1" />
-              Reject
-            </button>
-          </div>
-        )}
       </div>
     );
   };
@@ -441,24 +418,40 @@ export default function VerificationTable({
                             <h4 className="text-lg font-semibold text-gray-900">
                               Facial Verification (Stage 3)
                             </h4>
-                            <span
-                              className={`text-sm ${
-                                getVerificationStatus(
-                                  "stage3",
-                                  verification
-                                ) === "Verified"
-                                  ? "text-green-600"
-                                  : getVerificationStatus(
-                                      "stage3",
-                                      verification
-                                    ) === "Pending"
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              Status:{" "}
-                              {getVerificationStatus("stage3", verification)}
-                            </span>
+                            <div className="flex items-center space-x-4">
+                              <span
+                                className={`text-sm ${
+                                  getVerificationStatus(
+                                    "stage3",
+                                    verification
+                                  ) === "Verified"
+                                    ? "text-green-600"
+                                    : getVerificationStatus(
+                                        "stage3",
+                                        verification
+                                      ) === "Pending"
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                Status:{" "}
+                                {getVerificationStatus("stage3", verification)}
+                              </span>
+                              {canVerifyStage("stage3", verification) && (
+                                <button
+                                  onClick={() =>
+                                    handleStageApproval(
+                                      verification.tasker._id,
+                                      "stage3"
+                                    )
+                                  }
+                                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Verify Stage 3
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div>
@@ -470,16 +463,7 @@ export default function VerificationTable({
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage3", verification).map(
                                   (image, index) => (
-                                    <ImageWithActions
-                                      key={index}
-                                      image={image}
-                                      stage="stage3"
-                                      taskerId={verification.tasker._id}
-                                      showActions={canVerifyStage(
-                                        "stage3",
-                                        verification
-                                      )}
-                                    />
+                                    <ImageDisplay key={index} image={image} />
                                   )
                                 )}
                               </div>
@@ -499,24 +483,40 @@ export default function VerificationTable({
                             <h4 className="text-lg font-semibold text-gray-900">
                               Good Conduct Verification (Stage 4)
                             </h4>
-                            <span
-                              className={`text-sm ${
-                                getVerificationStatus(
-                                  "stage4",
-                                  verification
-                                ) === "Verified"
-                                  ? "text-green-600"
-                                  : getVerificationStatus(
-                                      "stage4",
-                                      verification
-                                    ) === "Pending"
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              Status:{" "}
-                              {getVerificationStatus("stage4", verification)}
-                            </span>
+                            <div className="flex items-center space-x-4">
+                              <span
+                                className={`text-sm ${
+                                  getVerificationStatus(
+                                    "stage4",
+                                    verification
+                                  ) === "Verified"
+                                    ? "text-green-600"
+                                    : getVerificationStatus(
+                                        "stage4",
+                                        verification
+                                      ) === "Pending"
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                Status:{" "}
+                                {getVerificationStatus("stage4", verification)}
+                              </span>
+                              {canVerifyStage("stage4", verification) && (
+                                <button
+                                  onClick={() =>
+                                    handleStageApproval(
+                                      verification.tasker._id,
+                                      "stage4"
+                                    )
+                                  }
+                                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Verify Stage 4
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div>
@@ -528,16 +528,7 @@ export default function VerificationTable({
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage4", verification).map(
                                   (image, index) => (
-                                    <ImageWithActions
-                                      key={index}
-                                      image={image}
-                                      stage="stage4"
-                                      taskerId={verification.tasker._id}
-                                      showActions={canVerifyStage(
-                                        "stage4",
-                                        verification
-                                      )}
-                                    />
+                                    <ImageDisplay key={index} image={image} />
                                   )
                                 )}
                               </div>
@@ -552,30 +543,45 @@ export default function VerificationTable({
                         </div>
 
                         {/* Office Appointment Verification (Final) */}
-                        {/* Office Appointment Verification (Final) */}
                         <div className="mb-6 p-4 border border-gray-200 rounded-lg">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900">
                               Office Appointment Verification (Final)
                             </h4>
-                            <span
-                              className={`text-sm ${
-                                getVerificationStatus(
-                                  "stage5",
-                                  verification
-                                ) === "Verified"
-                                  ? "text-green-600"
-                                  : getVerificationStatus(
-                                      "stage5",
-                                      verification
-                                    ) === "Pending"
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              Status:{" "}
-                              {getVerificationStatus("stage5", verification)}
-                            </span>
+                            <div className="flex items-center space-x-4">
+                              <span
+                                className={`text-sm ${
+                                  getVerificationStatus(
+                                    "stage5",
+                                    verification
+                                  ) === "Verified"
+                                    ? "text-green-600"
+                                    : getVerificationStatus(
+                                        "stage5",
+                                        verification
+                                      ) === "Pending"
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                Status:{" "}
+                                {getVerificationStatus("stage5", verification)}
+                              </span>
+                              {canVerifyStage("stage5", verification) && (
+                                <button
+                                  onClick={() =>
+                                    handleStageApproval(
+                                      verification.tasker._id,
+                                      "stage5"
+                                    )
+                                  }
+                                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Verify Stage 5
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="space-y-4">
@@ -652,41 +658,6 @@ export default function VerificationTable({
                                 </p>
                               </div>
                             </div>
-
-                            {/* Final Verification Buttons - Only show when Stage 3 & 4 are verified and Stage 5 is pending */}
-                            {getVerificationStatus("stage3", verification) ===
-                              "Verified" &&
-                              getVerificationStatus("stage4", verification) ===
-                                "Verified" &&
-                              getVerificationStatus("stage5", verification) ===
-                                "Pending" && (
-                                <div className="flex gap-4 justify-center pt-4 border-t">
-                                  <button
-                                    onClick={() =>
-                                      handleStageApproval(
-                                        verification.tasker._id,
-                                        "stage5"
-                                      )
-                                    }
-                                    className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                                  >
-                                    <CheckCircle className="w-5 h-5 mr-2" />
-                                    Verify Tasker Completely
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleFinalAction(
-                                        verification.tasker._id,
-                                        false
-                                      )
-                                    }
-                                    className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                                  >
-                                    <XCircle className="w-5 h-5 mr-2" />
-                                    Reject Tasker Verification
-                                  </button>
-                                </div>
-                              )}
 
                             {/* Show message if prerequisites not met */}
                             {getVerificationStatus("stage5", verification) ===

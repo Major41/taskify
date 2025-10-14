@@ -17,28 +17,50 @@ import { Tasker } from "@/types/tasker";
 
 interface TaskerDetailsProps {
   tasker: Tasker;
-  onSendMessage: (taskerId: string, message: string) => Promise<boolean>;
 }
 
-export default function TaskerDetails({
-  tasker,
-  onSendMessage,
-}: TaskerDetailsProps) {
+export default function TaskerDetails({ tasker }: TaskerDetailsProps) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim()) {
+      setError("Message cannot be empty");
+      return;
+    }
 
     setSending(true);
-    const success = await onSendMessage(tasker._id, message);
-    setSending(false);
+    setError("");
 
-    if (success) {
-      setSent(true);
-      setMessage("");
-      setTimeout(() => setSent(false), 3000);
+    try {
+      const response = await fetch("/api/admin/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: tasker._id,
+          message: message.trim(),
+          userType: "tasker", // Since this is a tasker details page
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSent(true);
+        setMessage("");
+        setTimeout(() => setSent(false), 3000);
+      } else {
+        setError(result.message || "Failed to send message");
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -226,10 +248,22 @@ export default function TaskerDetails({
             id="tasker-message"
             rows={3}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              setError(""); // Clear error when user starts typing
+            }}
             placeholder="I.e Hello John, We are writing to warn you that your account will be suspended if you continue declining clients' offers while online."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical"
+            className="w-full px-3 py-2 border text-black border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-vertical"
           />
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-2 text-red-600 text-sm flex items-center">
+              <XCircle className="w-4 h-4 mr-1" />
+              {error}
+            </div>
+          )}
+
           <div className="flex justify-between items-center mt-3">
             <div>
               {sent && (
@@ -242,7 +276,7 @@ export default function TaskerDetails({
             <button
               onClick={handleSendMessage}
               disabled={sending || !message.trim()}
-              className="send-message-btn bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="send-message-btn bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {sending ? "Sending..." : "Send Message"}
             </button>
