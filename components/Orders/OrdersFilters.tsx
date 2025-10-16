@@ -10,16 +10,25 @@ interface OrdersFiltersProps {
   onStatusChange: (status: OrderStatus | "all") => void;
   totalOrders: number;
   filteredCount: number;
+  statusCounts?: {
+    all: number;
+    pending: number;
+    expired: number;
+    negotiation: number;
+    ongoing: number;
+    cancelled: number;
+    completed: number;
+  };
 }
 
 const statusTabs = [
-  { value: "all", label: "All Orders", count: 0 },
-  { value: "pending", label: "Pending", count: 0 },
-  { value: "expired", label: "Expired", count: 0 },
-  { value: "negotiation", label: "In Negotiation", count: 0 },
-  { value: "ongoing", label: "Ongoing", count: 0 },
-  { value: "cancelled", label: "Cancelled", count: 0 },
-  { value: "completed", label: "Completed", count: 0 },
+  { value: "all", label: "All Orders" },
+  { value: "Pending", label: "Pending" },
+  { value: "Expired", label: "Expired" },
+  { value: "In Negotiation", label: "In Negotiation" },
+  { value: "Ongoing", label: "Ongoing" },
+  { value: "Cancelled", label: "Cancelled" },
+  { value: "Completed", label: "Completed" },
 ];
 
 export default function OrdersFilters({
@@ -29,7 +38,24 @@ export default function OrdersFilters({
   onStatusChange,
   totalOrders,
   filteredCount,
+  statusCounts,
 }: OrdersFiltersProps) {
+  // Calculate counts for each status tab
+  const getStatusCount = (status: string) => {
+    if (statusCounts) {
+      return statusCounts[status as keyof typeof statusCounts] || 0;
+    }
+
+    // Fallback to using filteredCount for the selected status
+    if (status === "all") {
+      return totalOrders;
+    }
+    if (status === selectedStatus) {
+      return filteredCount;
+    }
+    return 0;
+  };
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -47,32 +73,39 @@ export default function OrdersFilters({
       {/* Status Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto">
-          {statusTabs.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => onStatusChange(tab.value as OrderStatus | "all")}
-              className={`
-                whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors
-                ${
-                  selectedStatus === tab.value
-                    ? "border-green-500 text-green-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }
-              `}
-            >
-              {tab.label}
-              {tab.value === "all" && (
-                <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
-                  {totalOrders}
+          {statusTabs.map((tab) => {
+            const count = getStatusCount(tab.value);
+            const isActive = selectedStatus === tab.value;
+
+            return (
+              <button
+                key={tab.value}
+                onClick={() => onStatusChange(tab.value as OrderStatus | "all")}
+                className={`
+                  whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    isActive
+                      ? "border-green-500 text-green-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+              >
+                {tab.label}
+                <span
+                  className={`
+                    ml-2 py-0.5 px-2 rounded-full text-xs font-medium
+                    ${
+                      isActive
+                        ? "bg-green-100 text-green-600"
+                        : "bg-gray-100 text-gray-600"
+                    }
+                  `}
+                >
+                  {count}
                 </span>
-              )}
-              {tab.value !== "all" && selectedStatus === tab.value && (
-                <span className="ml-2 bg-green-100 text-green-600 py-0.5 px-2 rounded-full text-xs">
-                  {filteredCount}
-                </span>
-              )}
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </nav>
       </div>
     </div>

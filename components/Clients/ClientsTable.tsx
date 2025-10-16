@@ -139,12 +139,7 @@ export default function ClientsTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date Approved
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -206,36 +201,8 @@ export default function ClientsTable({
                       {getDateApproved(client)}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(client)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex flex-col space-y-2 min-w-[120px]">
-                      {client.is_approved ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSuspendClick(client);
-                          }}
-                          className="inline-flex items-center justify-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Suspend
-                        </button>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReinstate(client._id);
-                          }}
-                          className="inline-flex items-center justify-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Reinstate
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                 
+                  
                 </tr>
 
                 {/* Expanded Details Row */}

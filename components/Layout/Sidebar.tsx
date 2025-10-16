@@ -24,6 +24,7 @@ import {
   BarChart3,
   FileText,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -33,17 +34,21 @@ const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Task Orders", icon: ClipboardList },
   { href: "/withdrawals", label: "Payments Request", icon: CreditCard },
-  { href: "/records", label: "Mpesa Records", icon: FileText },
+  { href: "/records", label: "Mpesa Records", icon: FileText, adminOnly: true },
   { href: "/applications", label: "Application Request", icon: FileText },
   { href: "/verification", label: "Verification Request", icon: ShieldCheck },
   { href: "/taskers", label: "Taskers", icon: Users },
   { href: "/clients", label: "Clients", icon: UserCheck },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  {
+    href: "/messages",
+    label: "Messages",
+    icon: MessageSquare,
+    adminOnly: true,
+  },
 ];
 
 export default function Sidebar({ children }: SidebarProps) {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
@@ -54,10 +59,24 @@ export default function Sidebar({ children }: SidebarProps) {
     router.push("/");
   };
 
+  const handleRefresh = () => {
+    router.refresh(); // Refresh the page
+  };
+
   const currentUser = JSON.parse(
     localStorage.getItem("tasksfyUser") ||
       '{"role":"Super Admin","name":"Admin User"}'
   );
+
+  // Filter menu items based on user role
+  const filteredMenuItems = (items: typeof menuItems) => {
+    return items.filter((item) => {
+      if (item.adminOnly) {
+        return user?.role === "SUPER ADMIN";
+      }
+      return true;
+    });
+  };
 
   return (
     <div className="flex h-screen bg-gray-50/80 backdrop-blur-sm">
@@ -120,7 +139,7 @@ export default function Sidebar({ children }: SidebarProps) {
               Main Menu
             </h3>
             <div className="space-y-1">
-              {menuItems.slice(0, 6).map((item) => {
+              {filteredMenuItems(menuItems.slice(0, 6)).map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
                 return (
@@ -159,7 +178,7 @@ export default function Sidebar({ children }: SidebarProps) {
               Management
             </h3>
             <div className="space-y-1">
-              {menuItems.slice(6, 9).map((item) => {
+              {filteredMenuItems(menuItems.slice(6)).map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
                 return (
@@ -198,13 +217,16 @@ export default function Sidebar({ children }: SidebarProps) {
         <div className="p-2 border-t border-gray-200/60 bg-[#05A243] backdrop-blur-sm">
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-2 mb-2">
-            <Link
-              href="/admin-approval"
-              className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
-            >
-              <Crown className="w-4 h-4" />
-              <span className="text-xs font-medium">Approve Admin</span>
-            </Link>
+            {user?.role === "SUPER ADMIN" && (
+              <Link
+                href="/admin-approval"
+                className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
+              >
+                <Crown className="w-4 h-4" />
+                <span className="text-xs font-medium">Approve Admin</span>
+              </Link>
+            )}
+
             <button
               onClick={handleLogout}
               className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-red-700 rounded-lg hover:bg-red-500/20 transition-all duration-200 group border border-red-200/50"
@@ -243,7 +265,10 @@ export default function Sidebar({ children }: SidebarProps) {
               {/* Header Actions */}
               <div className="flex items-center space-x-2">
                 {/* Refresh */}
-                <button className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60">
+                <button
+                  onClick={handleRefresh}
+                  className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60"
+                >
                   <RefreshCw className="w-5 h-5" />
                 </button>
 

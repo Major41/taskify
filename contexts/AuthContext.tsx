@@ -17,7 +17,7 @@ interface User {
   phone_number: string;
   avatar_url?: string;
   isTasker: boolean;
-  role: "user" | "admin" | "SUPER_ADMIN";
+  role: "user" | "admin" | "SUPER ADMIN";
   isPhone_number_verified: boolean;
   createdAt: string;
 }

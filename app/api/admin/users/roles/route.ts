@@ -53,7 +53,7 @@ export async function PUT(request: Request) {
   try {
     const { userId, role, currentUserRole } = await request.json();
 
-    // Check if current user is SUPER_ADMIN
+    // Check if current user is SUPER ADMIN
     if (currentUserRole !== "SUPER ADMIN") {
       return NextResponse.json(
         {

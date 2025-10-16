@@ -1,10 +1,14 @@
-export type OrderStatus =
-  | "pending"
-  | "negotiation"
-  | "ongoing"
-  | "completed"
-  | "cancelled"
-  | "expired";
+// types/order.ts
+export const OrderStatus = {
+  PENDING: "Pending",
+  NEGOTIATION: "In Negotiation",
+  ONGOING: "Ongoing",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
+} as const;
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export interface Order {
   _id: string;
