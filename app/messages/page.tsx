@@ -39,6 +39,14 @@ export default function AdminMessagesPage() {
     message: string;
   } | null>(null);
 
+  // Get token from localStorage
+  const getToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("authToken") || localStorage.getItem("token");
+    }
+    return null;
+  };
+
   // Fetch messages
   useEffect(() => {
     fetchMessages();
@@ -47,7 +55,18 @@ export default function AdminMessagesPage() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/messages");
+      const token = getToken();
+
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
+
+      const response = await fetch("/api/admin/messages", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await response.json();
 
       if (data.success) setMessages(data.data);
@@ -69,28 +88,50 @@ export default function AdminMessagesPage() {
 
     try {
       setSending(true);
-      const response = await fetch("/api/admin/messages/broadcast", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: generalMessage.trim(),
-          userType: "all",
-        }),
-      });
+      const token = getToken();
 
-      const data = await response.json();
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
 
-      if (data.success) {
-        showAlert(
-          "success",
-          `Message sent to all users (${data.data.sentCount} users)`
-        );
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/superAdmin/topic/users/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            recipientId: "null",
+            requestId: "",
+            title: "Message From Tasksfy Inc",
+            body: generalMessage.trim(),
+            type: "",
+            deepLink: "",
+            topic: "users",
+          }),
+        }
+      );
+
+      // Handle response - first get as text to avoid JSON parsing errors
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { success: false, message: responseText };
+      }
+
+      if (response.ok) {
+        showAlert("success", "Message sent to all users successfully!");
+        setGeneralMessage(""); // Clear the input
         // Refresh messages to show the new broadcast
         fetchMessages();
       } else {
-        showAlert("error", data.message);
+        showAlert("error", data.message || "Failed to send message to users");
       }
     } catch (error) {
       console.error("Error broadcasting message:", error);
@@ -105,28 +146,50 @@ export default function AdminMessagesPage() {
 
     try {
       setSending(true);
-      const response = await fetch("/api/admin/messages/broadcast", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: taskersMessage.trim(),
-          userType: "taskers",
-        }),
-      });
+      const token = getToken();
 
-      const data = await response.json();
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
 
-      if (data.success) {
-        showAlert(
-          "success",
-          `Message sent to all taskers (${data.data.sentCount} taskers)`
-        );
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/superAdmin/topic/taskers/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            recipientId: "null",
+            requestId: "",
+            title: "Message From Tasksfy Inc",
+            body: taskersMessage.trim(),
+            type: "",
+            deepLink: "",
+            topic: "taskers",
+          }),
+        }
+      );
+
+      // Handle response - first get as text to avoid JSON parsing errors
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { success: false, message: responseText };
+      }
+
+      if (response.ok) {
+        showAlert("success", "Message sent to all taskers successfully!");
+        setTaskersMessage(""); // Clear the input
         // Refresh messages to show the new broadcast
         fetchMessages();
       } else {
-        showAlert("error", data.message);
+        showAlert("error", data.message || "Failed to send message to taskers");
       }
     } catch (error) {
       console.error("Error broadcasting to taskers:", error);
@@ -143,8 +206,18 @@ export default function AdminMessagesPage() {
 
     try {
       setDeleting(messageId);
+      const token = getToken();
+
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
+
       const response = await fetch(`/api/admin/messages?id=${messageId}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -205,7 +278,7 @@ export default function AdminMessagesPage() {
               <div className="flex items-center space-x-2 mb-4">
                 <Users className="h-5 w-5 text-gray-700" />
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Compose a general message to all Users
+                  Compose a general message to all Users (Clients)
                 </h3>
               </div>
 
@@ -229,7 +302,7 @@ export default function AdminMessagesPage() {
                     ) : (
                       <Send className="h-4 w-4 mr-2" />
                     )}
-                    {sending ? "Sending..." : "Send Message"}
+                    {sending ? "Sending..." : "Send to All Users"}
                   </button>
                 </div>
               </div>
@@ -266,14 +339,13 @@ export default function AdminMessagesPage() {
                     ) : (
                       <Send className="h-4 w-4 mr-2" />
                     )}
-                    {sending ? "Sending..." : "Send Message"}
+                    {sending ? "Sending..." : "Send to All Taskers"}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
