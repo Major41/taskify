@@ -204,7 +204,7 @@ export default function TaskersTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {formatDate(tasker.appliedAt)}
+                      {formatDate(tasker.joined_date)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
