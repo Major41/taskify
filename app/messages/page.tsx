@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Trash2,
 } from "lucide-react";
+import{useAuth} from '@/contexts/AuthContext'
 
 interface Message {
   _id: string;
@@ -24,6 +25,7 @@ interface Message {
 }
 
 export default function AdminMessagesPage() {
+  const { token } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [generalMessage, setGeneralMessage] = useState(
     "Hello there, We wish you a merry Christmas and a happy New Year. Tasksfy values you and wishes you a blessed eve."
@@ -39,14 +41,6 @@ export default function AdminMessagesPage() {
     message: string;
   } | null>(null);
 
-  // Get token from localStorage
-  const getToken = () => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("authToken") || localStorage.getItem("token");
-    }
-    return null;
-  };
-
   // Fetch messages
   useEffect(() => {
     fetchMessages();
@@ -55,7 +49,7 @@ export default function AdminMessagesPage() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const token = getToken();
+      
 
       if (!token) {
         showAlert("error", "Authentication token not found");
@@ -88,7 +82,6 @@ export default function AdminMessagesPage() {
 
     try {
       setSending(true);
-      const token = getToken();
 
       if (!token) {
         showAlert("error", "Authentication token not found");

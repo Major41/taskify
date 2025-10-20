@@ -75,6 +75,7 @@ export default function ClientsPage() {
           isPhone_number_verified: user.user.isPhone_number_verified || false,
           reviews:user.client_reviews,
           client_average_rating:user.user.client_average_rating,
+          walletBalance: user.user.walletBalance,
         }));
 
         setClients(transformedClients);
@@ -160,9 +161,6 @@ export default function ClientsPage() {
 
  const handleSendMessage = async (clientId: string, message: string) => {
    try {
-     const token =
-       localStorage.getItem("authToken") || localStorage.getItem("token");
-
      if (!token) {
        throw new Error("Authentication token not found");
      }
@@ -201,7 +199,8 @@ export default function ClientsPage() {
      alert("Failed to send message. Please try again.");
      return false;
    }
- };
+  };
+  
   if (loading) {
     return (
       <div className="p-6">

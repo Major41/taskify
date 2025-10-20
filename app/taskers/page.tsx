@@ -55,30 +55,39 @@ export default function TaskersPage() {
 
       if (data.success && data.taskersWithReviewsAndSkills) {
         // Transform the API response to match our Tasker interface
-        const transformedTaskers = data.taskersWithReviewsAndSkills.map((tasker: any) => ({
-          id: tasker.tasker.tasker_id,
-          name:
-            `${tasker.tasker.user?.first_name || ""} ${
-              tasker.tasker.user?.last_name || ""
-            }`.trim() || "Unknown Tasker",
-          email: tasker.tasker.user?.email || "No email",
-          phone: tasker.tasker.user?.phone_number || "No phone",
-          profile_picture: tasker.tasker.user?.profile_url,
-          skills: tasker.skills || [],
-          rating: tasker.tasker.tasker_average_rating || 0,
-          completed_tasks: tasker.completed_tasks_count || 0,
-          is_approved: tasker.is_approved || false,
-          is_accepting_requests: tasker.is_accepting_requests || false,
-          joined_date: tasker.tasker.tasker_reg_date,
-          category: tasker.category || "General",
-          location: tasker.location || "Not specified",
-          veverification_level1_status: tasker.tasker.user.verification_level1_status,
-          veverification_level2_status: tasker.tasker.user.verification_level1_status,
-          veverification_level3_status: tasker.tasker.user.verification_level3_status,
-          veverification_level4_status: tasker.tasker.user.verification_level4_status,
-          veverification_level5_status: tasker.tasker.user.verification_level5_status,
-          reviews: tasker.reviews || [],
-        }));
+        const transformedTaskers = data.taskersWithReviewsAndSkills.map(
+          (tasker: any) => ({
+            id: tasker.tasker.tasker_id,
+            name:
+              `${tasker.tasker.user?.first_name || ""} ${
+                tasker.tasker.user?.last_name
+              }`.trim() || "Unknown Tasker",
+            email: tasker.tasker.user?.email,
+            phone: tasker.tasker.user?.phone_number,
+            profile_picture: tasker.tasker.user?.profile_url,
+            skills: tasker.skills || [],
+            rating: tasker.tasker.tasker_average_rating || 0,
+            completed_tasks: tasker.completed_tasks_count || 0,
+            is_approved: tasker.tasker.is_approved,
+            is_accepting_requests: tasker.tasker.is_accepting_requests,
+            joined_date: tasker.tasker.tasker_reg_date,
+            category: tasker.category,
+            location: tasker.location,
+            veverification_level1_status:
+              tasker.tasker.user.verification_level1_status,
+            verification_level2_status:
+              tasker.tasker.user.verification_level1_status,
+            verification_level3_status:
+              tasker.tasker.user.verification_level3_status,
+            verification_level4_status:
+              tasker.tasker.user.verification_level4_status,
+            verification_level5_status:
+              tasker.tasker.user.verification_level5_status,
+            reviews: tasker.reviews || [],
+            walletBalance: tasker.tasker.user.walletBalance,
+            tasker_average_rating: tasker.tasker.tasker_average_rating,
+          })
+        );
 
         setTaskers(transformedTaskers);
       } else {

@@ -137,10 +137,10 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
           <div className="client-rating flex items-center space-x-4 mb-6">
             <strong className="text-gray-900">Client Avg Rating:</strong>
             <span className="rating-value text-2xl font-bold text-yellow-600">
-              {client.client_average_rating?.toFixed(1) || "0.0"}
+              {client.client_average_rating?.toFixed(1)}
             </span>
             <div className="rating-stars">
-              {renderStars(Math.round(client.client_average_rating || 0))}
+              {renderStars(Math.round(client.client_average_rating))}
             </div>
           </div>
 

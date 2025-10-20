@@ -384,26 +384,9 @@ export default function VerificationTable({
                               {verification.tasker.email}
                             </p>
                             <p className="text-sm text-gray-500">
-                              Tasker Status: {verification.tasker.tasker_application_status}
+                              Tasker Status:{" "}
+                              {verification.tasker.tasker_application_status}
                             </p>
-                          </div>
-                        </div>
-
-                        {/* Referral Information */}
-                        <div className="mb-6">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                            Referral Information
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {getReferralInfo(verification)?.map((ref, index) => (
-                              <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                                <h5 className="font-medium text-gray-900">{ref.name}</h5>
-                                <p className="text-sm text-gray-600">ID: {ref.id}</p>
-                                <p className="text-sm text-gray-600">Phone: {ref.phone}</p>
-                                <p className="text-sm text-gray-600">Relationship: {ref.relationship}</p>
-                                <p className="text-sm text-gray-600">Location: {ref.location}</p>
-                              </div>
-                            ))}
                           </div>
                         </div>
 
@@ -453,7 +436,8 @@ export default function VerificationTable({
                             <h5 className="font-medium text-gray-900 mb-4">
                               Identity Verification
                             </h5>
-                            {getStageImages("stage3", verification).length > 0 ? (
+                            {getStageImages("stage3", verification).length >
+                            0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage3", verification).map(
                                   (image, index) => (
@@ -517,7 +501,8 @@ export default function VerificationTable({
                             <h5 className="font-medium text-gray-900 mb-4">
                               Good Conduct Certificate
                             </h5>
-                            {getStageImages("stage4", verification).length > 0 ? (
+                            {getStageImages("stage4", verification).length >
+                            0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage4", verification).map(
                                   (image, index) => (
@@ -532,6 +517,39 @@ export default function VerificationTable({
                                 </p>
                               </div>
                             )}
+                          </div>
+
+                          {/* Referral Information */}
+                          <div className="my-6">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                              Referral Information
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {getReferralInfo(verification)?.map(
+                                (ref, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-gray-50 p-4 rounded-lg"
+                                  >
+                                    <h5 className="font-medium text-gray-900">
+                                      {ref.name}
+                                    </h5>
+                                    <p className="text-sm text-gray-600">
+                                      ID: {ref.id}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      Phone: {ref.phone}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      Relationship: {ref.relationship}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      Location: {ref.location}
+                                    </p>
+                                  </div>
+                                )
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -581,7 +599,9 @@ export default function VerificationTable({
                             {/* Information Paragraph */}
                             <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
                               <p className="text-gray-700">
-                                This is the final verification step. Approval here will fully verify the tasker and grant them complete platform access.
+                                This is the final verification step. Approval
+                                here will fully verify the tasker and grant them
+                                complete platform access.
                               </p>
                             </div>
 
@@ -599,7 +619,10 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Stage 3</p>
                                 <p>
-                                  {getVerificationStatus("stage3", verification)}
+                                  {getVerificationStatus(
+                                    "stage3",
+                                    verification
+                                  )}
                                 </p>
                               </div>
                               <div
@@ -614,7 +637,10 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Stage 4</p>
                                 <p>
-                                  {getVerificationStatus("stage4", verification)}
+                                  {getVerificationStatus(
+                                    "stage4",
+                                    verification
+                                  )}
                                 </p>
                               </div>
                               <div
@@ -629,7 +655,10 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Final</p>
                                 <p>
-                                  {getVerificationStatus("stage5", verification)}
+                                  {getVerificationStatus(
+                                    "stage5",
+                                    verification
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -639,11 +668,15 @@ export default function VerificationTable({
                               "Pending" &&
                               (getVerificationStatus("stage3", verification) !==
                                 "Verified" ||
-                                getVerificationStatus("stage4", verification) !== "Verified") && (
+                                getVerificationStatus(
+                                  "stage4",
+                                  verification
+                                ) !== "Verified") && (
                                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                                   <p className="text-yellow-700">
                                     <strong>Prerequisites Required:</strong>{" "}
-                                    Stage 3 and Stage 4 must be verified before final approval.
+                                    Stage 3 and Stage 4 must be verified before
+                                    final approval.
                                   </p>
                                 </div>
                               )}
@@ -653,7 +686,9 @@ export default function VerificationTable({
                               "Verified" && (
                               <div className="bg-green-50 border-l-4 border-green-400 p-4">
                                 <p className="text-green-700">
-                                  <strong>✓ Tasker Fully Verified:</strong> This tasker has been completely verified and granted platform access.
+                                  <strong>✓ Tasker Fully Verified:</strong> This
+                                  tasker has been completely verified and
+                                  granted platform access.
                                 </p>
                               </div>
                             )}

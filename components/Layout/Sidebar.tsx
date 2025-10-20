@@ -23,8 +23,13 @@ import { useAuth } from "@/contexts/AuthContext";
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Task Orders", icon: ClipboardList },
-  { href: "/withdrawals", label: "Payments Request", icon: CreditCard },
-  { href: "/records", label: "Mpesa Records", icon: FileText, adminOnly: true },
+  {
+    href: "/withdrawals",
+    label: "Payments Request",
+    icon: CreditCard,
+    adminOnly: true,
+  },
+  { href: "/records", label: "Mpesa Records", icon: FileText },
   { href: "/applications", label: "Application Request", icon: FileText },
   { href: "/verification", label: "Verification Request", icon: ShieldCheck },
   { href: "/taskers", label: "Taskers", icon: Users },
