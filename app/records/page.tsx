@@ -12,20 +12,23 @@ import {
   Receipt,
   Loader2,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MpesaRecord {
   _id: string;
+  CheckoutRequestID: string;
   clientId: string;
-  merchantRequestID: string;
-  resultCode: number;
-  resultDesc: string;
-  amount: string;
-  mpesaReceiptNumber: string;
-  transactionDate: string;
-  phoneNumber: string;
+  MerchantRequestID: string;
+  ResultCode: number;
+  ResultDesc: string;
+  Amount: string;
+  MpesaReceiptNumber: string;
+  TransactionDate: string;
+  PhoneNumber: string;
 }
 
 export default function AdminRecordsPage() {
+  const { token } = useAuth();
   const [records, setRecords] = useState<MpesaRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,16 +44,47 @@ export default function AdminRecordsPage() {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/records");
-      const data = await response.json();
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/admin/all/mpesa/payments",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (data.success) {
-        setRecords(data.data);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data); // Debug log
+
+      if (data.success && data.mpesaPaymentRecords) {
+        // Transform the API response to match our interface
+        const transformedRecords = data.mpesaPaymentRecords.map(
+          (record: any, index: number) => ({
+            _id: record.CheckoutRequestID || `record-${index}`, // Use CheckoutRequestID as _id
+            CheckoutRequestID: record.CheckoutRequestID,
+            clientId: record.clientId,
+            MerchantRequestID: record.MerchantRequestID,
+            ResultCode: record.ResultCode,
+            ResultDesc: record.ResultDesc,
+            Amount: record.Amount,
+            MpesaReceiptNumber: record.MpesaReceiptNumber,
+            TransactionDate: record.TransactionDate,
+            PhoneNumber: record.PhoneNumber,
+          })
+        );
+
+        setRecords(transformedRecords);
       } else {
         console.error("Failed to load records:", data.message);
+        setRecords([]);
       }
     } catch (error) {
       console.error("Error fetching records:", error);
+      setRecords([]);
     } finally {
       setLoading(false);
     }
@@ -59,31 +93,42 @@ export default function AdminRecordsPage() {
   // Filter records based on search and status
   const filteredRecords = records.filter((record) => {
     const matchesSearch =
-      record._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.phoneNumber.includes(searchTerm) ||
-      record.mpesaReceiptNumber
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      record.amount.includes(searchTerm);
+      record.CheckoutRequestID.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) ||
+      record.PhoneNumber.includes(searchTerm) ||
+      record.MpesaReceiptNumber.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) ||
+      record.Amount.includes(searchTerm) ||
+      record.MerchantRequestID.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       filterStatus === "all" ||
-      (filterStatus === "success" && record.resultCode === 0) ||
-      (filterStatus === "failed" && record.resultCode !== 0);
+      (filterStatus === "success" && record.ResultCode === 0) ||
+      (filterStatus === "failed" && record.ResultCode !== 0);
 
     return matchesSearch && matchesStatus;
   });
 
-  const successCount = records.filter((r) => r.resultCode === 0).length;
-  const failedCount = records.filter((r) => r.resultCode !== 0).length;
+  const successCount = records.filter((r) => r.ResultCode === 0).length;
+  const failedCount = records.filter((r) => r.ResultCode !== 0).length;
   const totalCount = records.length;
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString(),
-    };
+    try {
+      const date = new Date(dateString);
+      return {
+        date: date.toLocaleDateString(),
+        time: date.toLocaleTimeString(),
+      };
+    } catch (error) {
+      console.error("Error formatting date:", dateString);
+      return {
+        date: "Invalid Date",
+        time: "Invalid Time",
+      };
+    }
   };
 
   const getStatusInfo = (resultCode: number) => {
@@ -107,7 +152,8 @@ export default function AdminRecordsPage() {
       setExporting(true);
 
       const headers = [
-        "Transaction ID",
+        "Checkout Request ID",
+        "Merchant Request ID",
         "Phone Number",
         "Amount",
         "Date",
@@ -115,20 +161,23 @@ export default function AdminRecordsPage() {
         "Status",
         "Receipt Number",
         "Description",
+        "Client ID",
       ];
       const csvData = filteredRecords.map((record) => {
-        const { date, time } = formatDateTime(record.transactionDate);
-        const status = getStatusInfo(record.resultCode).text;
+        const { date, time } = formatDateTime(record.TransactionDate);
+        const status = getStatusInfo(record.ResultCode).text;
 
         return [
-          record._id,
-          record.phoneNumber,
-          record.amount,
+          record.CheckoutRequestID,
+          record.MerchantRequestID,
+          record.PhoneNumber,
+          record.Amount,
           date,
           time,
           status,
-          record.mpesaReceiptNumber,
-          record.resultDesc,
+          record.MpesaReceiptNumber,
+          record.ResultDesc,
+          record.clientId,
         ];
       });
 
@@ -190,8 +239,25 @@ export default function AdminRecordsPage() {
       </div>
 
       {/* Search and Filter */}
-      <div className=" mb-6">
-        <div className="">
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          {/* Search Bar */}
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by receipt, phone, amount..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-black pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500/30 transition-all"
+            />
+          </div>
+
+          {/* Filter and Export */}
+          <div className="flex gap-3 w-full sm:w-auto">
+           
+
+            {/* Export Button */}
             <button
               onClick={exportToCSV}
               disabled={exporting || filteredRecords.length === 0}
@@ -206,7 +272,7 @@ export default function AdminRecordsPage() {
             </button>
           </div>
         </div>
-      
+      </div>
 
       {/* Records Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -215,7 +281,7 @@ export default function AdminRecordsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Transaction ID
+                  Checkout Request ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Phone Number
@@ -237,16 +303,19 @@ export default function AdminRecordsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRecords.length > 0 ? (
                 filteredRecords.map((record) => {
-                  const { date, time } = formatDateTime(record.transactionDate);
-                  const statusInfo = getStatusInfo(record.resultCode);
+                  const { date, time } = formatDateTime(record.TransactionDate);
+                  const statusInfo = getStatusInfo(record.ResultCode);
                   const StatusIcon = statusInfo.icon;
 
                   return (
                     <tr key={record._id} className="hover:bg-gray-50">
-                      {/* Transaction ID */}
+                      {/* Checkout Request ID */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 font-mono">
-                          {record._id}
+                          {record.CheckoutRequestID}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {record.MerchantRequestID}
                         </div>
                       </td>
 
@@ -254,7 +323,7 @@ export default function AdminRecordsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-gray-900">
                           <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                          {record.phoneNumber}
+                          {record.PhoneNumber}
                         </div>
                       </td>
 
@@ -262,7 +331,7 @@ export default function AdminRecordsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm font-medium text-gray-900">
                           <DollarSign className="h-4 w-4 text-gray-400 mr-1" />
-                          KES {parseInt(record.amount).toLocaleString()}
+                          KES {parseInt(record.Amount).toLocaleString()}
                         </div>
                       </td>
 
@@ -285,9 +354,9 @@ export default function AdminRecordsPage() {
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {statusInfo.text}
                         </span>
-                        {record.resultCode !== 0 && (
+                        {record.ResultCode !== 0 && (
                           <div className="text-xs text-gray-500 mt-1 max-w-xs truncate">
-                            {record.resultDesc}
+                            {record.ResultDesc}
                           </div>
                         )}
                       </td>
@@ -297,7 +366,7 @@ export default function AdminRecordsPage() {
                         <div className="flex items-center text-sm text-gray-900">
                           <Receipt className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="font-mono">
-                            {record.mpesaReceiptNumber || "N/A"}
+                            {record.MpesaReceiptNumber || "N/A"}
                           </span>
                         </div>
                       </td>

@@ -94,7 +94,7 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
 
   return (
     <div className="tasker-details-flex flex">
-      <div className="tasker-details-left">
+      <div className="tasker-details-left flex-1">
         <div className="about-info">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
             Profile Information
@@ -243,12 +243,12 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
         </div>
       </div>
 
-      <div className="tasker-details-right bg-gray-50 p-6 rounded-lg">
+      <div className="tasker-details-right bg-gray-50 p-6 rounded-lg flex-1">
         <div className="activity-title text-lg font-semibold text-gray-900 mb-4 text-center">
           Taskers' Ratings and Reviews
         </div>
 
-        <div className="activity-list space-y-4">
+        <div className="activity-list space-y-4 ">
           {client.reviews && client.reviews.length > 0 ? (
             client.reviews.slice(0, 5).map((review) => (
               <div
@@ -256,15 +256,16 @@ export default function ClientDetails({ client }: ClientDetailsProps) {
                 className="activity-item bg-white p-4 rounded-lg shadow-sm"
               >
                 <div className="activity-date text-sm text-gray-500 mb-2">
-                  {formatDate(review.createdAt)}
+                  {formatDate(review.feedbackDate)}
                 </div>
                 <div className="activity-text text-gray-700 mb-2">
-                  {review.comment}
+                  {review.feedback
+}
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">- {review.tasker}</div>
+                  <div className="text-sm text-gray-600">- {review.senderFName}</div>
                   <div className="flex items-center space-x-1">
-                    {renderStars(review.rating)}
+                    {renderStars(review.feedbackRatingStar)}
                   </div>
                 </div>
               </div>

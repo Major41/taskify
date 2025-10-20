@@ -9,58 +9,52 @@ import React, {
 } from "react";
 
 interface User {
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone_number: string;
   avatar_url?: string;
   isTasker: boolean;
-  role: "user" | "admin" | "SUPER ADMIN";
+  role: "ADMIN" | "SUPER ADMIN" | "USER";
   isPhone_number_verified: boolean;
-  createdAt: string;
+  created_at: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
+  login: (userData: User, authToken?: string) => void;
   logout: () => void;
   loading: boolean;
   isAuthenticated: boolean;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user data exists in localStorage on app start
-    const storedUser = localStorage.getItem("tasksfyUser");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-      } catch (error) {
-        console.error("Error parsing stored user data:", error);
-        localStorage.removeItem("tasksfyUser");
-      }
-    }
+    // No longer loading from localStorage on app start
+    // All authentication state will be managed in context only
     setLoading(false);
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: User, authToken?: string) => {
     setUser(userData);
-    localStorage.setItem("tasksfyUser", JSON.stringify(userData));
+    if (authToken) {
+      setToken(authToken);
+    }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("tasksfyUser");
+    setToken(null);
     // Redirect to login page
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   const value = {
@@ -69,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     loading,
     isAuthenticated: !!user,
+    token,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

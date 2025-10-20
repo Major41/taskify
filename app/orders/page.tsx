@@ -5,18 +5,54 @@ import { useSearchParams } from "next/navigation";
 import OrdersTable from "@/components/Orders/OrdersTable";
 import OrdersFilters from "@/components/Orders/OrdersFilters";
 import { Order, OrderStatus } from "@/types/order";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Define status values for validation
+// Define status values for validation - updated to match your API
 const ORDER_STATUS_VALUES = [
   "Pending",
-  "Negotiation",
-  "Ongoing",
+  "Expired",
+  "Declined",
+  "Accepted",
   "Completed",
   "Cancelled",
-  "Expired",
 ] as const;
 
+// Define the API status mapping
+const API_STATUS_MAPPING = {
+  Pending: "Pending",
+  Expired: "Expired",
+  Declined: "Declined",
+  Accepted: "Accepted",
+  Completed: "Completed",
+  Cancelled: "Cancelled",
+} as const;
+
+interface ApiRequest {
+  request_id: string;
+  client_id: string;
+  tasker_id?: string;
+  title: string;
+  description: string;
+  budget: number;
+  location: string;
+  category: string;
+  status: string;
+  notification_status: string;
+  created_at: string;
+  updated_at: string;
+  client?: {
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+  };
+  tasker?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
 export default function OrdersPage() {
+  const { token } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,24 +78,93 @@ export default function OrdersPage() {
     filterOrders();
   }, [orders, searchQuery, selectedStatus]);
 
-  const loadOrders = async () => {
+  const fetchRequestsByStatus = async (
+    status: string
+  ): Promise<ApiRequest[]> => {
     try {
-      setLoading(true);
-      const response = await fetch("/api/admin/orders");
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/requests/by/notificationStatus?notification_status=${status}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch orders");
+        throw new Error(`Failed to fetch ${status} requests`);
       }
 
       const data = await response.json();
+      return data.requests || [];
+    } catch (error) {
+      console.error(`Error fetching ${status} requests:`, error);
+      return [];
+    }
+  };
 
-      if (data.success) {
-        setOrders(data.data);
-      } else {
-        throw new Error(data.message || "Failed to load orders");
-      }
+  const transformApiRequestToOrder = (apiRequest: ApiRequest): Order => {
+    console.log("Transforming API request:", apiRequest);
+    return {
+      id: apiRequest.request_id,
+      requestNumber: apiRequest.receipt_no,
+      taskerName: apiRequest.tasker
+        ? `${apiRequest.tasker.user.first_name} ${apiRequest.tasker.user.last_name}`
+        : "Not Assigned",
+      clientName: apiRequest.client
+        ? `${apiRequest.user.first_name} ${apiRequest.user.last_name}`
+        : "Unknown Client",
+      clientPhone: apiRequest?.user?.phone_number,
+      description: apiRequest.description,
+      budget: apiRequest.budget,
+      location: apiRequest.location,
+      category: apiRequest.category,
+      status: apiRequest.notification_status as OrderStatus,
+      createdAt: apiRequest.date_of_request,
+      updatedAt: apiRequest.date_of_request,
+      taskerProfileImage: apiRequest?.tasker?.user?.profile_url,
+    };
+  };
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch requests for all statuses
+      const [
+        pendingRequests,
+        expiredRequests,
+        declinedRequests,
+        acceptedRequests,
+        completedRequests,
+        cancelledRequests,
+      ] = await Promise.all([
+        fetchRequestsByStatus("Pending"),
+        fetchRequestsByStatus("Expired"),
+        fetchRequestsByStatus("Declined"),
+        fetchRequestsByStatus("Accepted"),
+        fetchRequestsByStatus("Completed"),
+        fetchRequestsByStatus("Cancelled"),
+      ]);
+
+      // Combine all requests
+      const allRequests = [
+        ...pendingRequests,
+        ...expiredRequests,
+        ...declinedRequests,
+        ...acceptedRequests,
+        ...completedRequests,
+        ...cancelledRequests,
+      ];
+
+      // Transform API requests to Order format
+      const transformedOrders = allRequests.map(transformApiRequestToOrder);
+
+      setOrders(transformedOrders);
     } catch (error) {
       console.error("Failed to load orders:", error);
+      // Fallback to empty array if API fails
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -97,11 +202,10 @@ export default function OrdersPage() {
       all: orders.length,
       Pending: orders.filter((order) => order.status === "Pending").length,
       Expired: orders.filter((order) => order.status === "Expired").length,
-      Negotiation: orders.filter((order) => order.status === "In Negotiation")
-        .length,
-      Ongoing: orders.filter((order) => order.status === "Ongoing").length,
-      Cancelled: orders.filter((order) => order.status === "Cancelled").length,
+      Declined: orders.filter((order) => order.status === "Declined").length,
+      Accepted: orders.filter((order) => order.status === "Accepted").length,
       Completed: orders.filter((order) => order.status === "Completed").length,
+      Cancelled: orders.filter((order) => order.status === "Cancelled").length,
     };
   };
 
@@ -110,19 +214,21 @@ export default function OrdersPage() {
     newStatus: OrderStatus
   ) => {
     try {
-      const response = await fetch("/api/admin/orders/status", {
+      // Note: You'll need to implement the API endpoint for updating request status
+      const response = await fetch("/api/admin/requests/status", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          orderId,
-          status: newStatus,
+          requestId: orderId,
+          notification_status: newStatus,
         }),
       });
 
       if (response.ok) {
-        await loadOrders();
+        await loadOrders(); // Reload orders to get updated data
       } else {
         throw new Error("Failed to update order status");
       }
@@ -135,25 +241,29 @@ export default function OrdersPage() {
   const handleDeleteOrder = async (orderId: string) => {
     if (
       !confirm(
-        "Are you sure you want to delete this order? This action cannot be undone."
+        "Are you sure you want to delete this request? This action cannot be undone."
       )
     )
       return;
 
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
+      // Note: You'll need to implement the API endpoint for deleting requests
+      const response = await fetch(`/api/admin/requests/${orderId}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
         await loadOrders();
-        alert("Order deleted successfully");
+        alert("Request deleted successfully");
       } else {
-        throw new Error("Failed to delete order");
+        throw new Error("Failed to delete request");
       }
     } catch (error) {
-      console.error("Failed to delete order:", error);
-      alert("Failed to delete order. Please try again.");
+      console.error("Failed to delete request:", error);
+      alert("Failed to delete request. Please try again.");
     }
   };
 
@@ -179,10 +289,10 @@ export default function OrdersPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Task Orders
+              Task Requests
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {filteredOrders.length} of {orders.length} orders
+              Showing {filteredOrders.length} of {orders.length} requests
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -229,12 +339,12 @@ export default function OrdersPage() {
             </svg>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No orders found
+            No requests found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
             {orders.length === 0
-              ? "No orders have been created yet. Orders will appear here once clients start making requests."
-              : "No orders match your current filters. Try adjusting your search criteria."}
+              ? "No requests have been created yet. Requests will appear here once clients start making requests."
+              : "No requests match your current filters. Try adjusting your search criteria."}
           </p>
           {(searchQuery || selectedStatus !== "all") && (
             <button

@@ -1,3 +1,4 @@
+// components/Layout/Sidebar.tsx
 "use client";
 
 import { useState } from "react";
@@ -12,23 +13,12 @@ import {
   UserCheck,
   ShieldCheck,
   MessageSquare,
-  Menu,
   X,
-  Search,
-  Bell,
-  RefreshCw,
   LogOut,
   Crown,
-  Settings,
-  HelpCircle,
-  BarChart3,
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface SidebarProps {
-  children: React.ReactNode;
-}
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -47,26 +37,29 @@ const menuItems = [
   },
 ];
 
-export default function Sidebar({ children }: SidebarProps) {
-  const { user } = useAuth();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+
+
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem("tasksfyUser");
+    logout();
     router.push("/");
   };
 
-  const handleRefresh = () => {
-    router.refresh(); // Refresh the page
+  const currentUser = user || {
+    first_name: "Admin",
+    last_name: "User",
+    role: "ADMIN",
   };
-
-  const currentUser = JSON.parse(
-    localStorage.getItem("tasksfyUser") ||
-      '{"role":"Super Admin","name":"Admin User"}'
-  );
 
   // Filter menu items based on user role
   const filteredMenuItems = (items: typeof menuItems) => {
@@ -79,26 +72,24 @@ export default function Sidebar({ children }: SidebarProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50/80 backdrop-blur-sm">
+    <>
       {/* Mobile sidebar backdrop */}
-      {isSidebarOpen && (
+      {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <aside
         className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-80 bg-white/95 backdrop-blur-xl border-r border-gray-200/60
-        transform transition-all duration-300 ease-in-out
-        flex flex-col shadow-2xl shadow-green-900/5
-        ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }
-      `}
+          fixed lg:static inset-y-0 left-0 z-50
+          w-80 bg-white/95 backdrop-blur-xl border-r border-gray-200/60
+          transform transition-all duration-300 ease-in-out
+          flex flex-col shadow-2xl shadow-green-900/5
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
       >
         {/* Header Section */}
         <div className="p-4 border-b bg-[#05A243]">
@@ -124,7 +115,7 @@ export default function Sidebar({ children }: SidebarProps) {
 
             {/* Close button for mobile */}
             <button
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={onClose}
               className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-gray-600" />
@@ -154,7 +145,7 @@ export default function Sidebar({ children }: SidebarProps) {
                           : "text-text-white hover:bg-gray-50/80 hover:text-gray-900 border border-transparent"
                       }
                     `}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={onClose}
                   >
                     <Icon
                       className={`w-5 h-5 transition-colors ${
@@ -193,7 +184,7 @@ export default function Sidebar({ children }: SidebarProps) {
                           : "text-white hover:bg-gray-50/80 hover:text-gray-900 border border-transparent"
                       }
                     `}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={onClose}
                   >
                     <Icon
                       className={`w-5 h-5 transition-colors ${
@@ -215,12 +206,12 @@ export default function Sidebar({ children }: SidebarProps) {
 
         {/* Footer Section */}
         <div className="p-2 border-t border-gray-200/60 bg-[#05A243] backdrop-blur-sm">
-          {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             {user?.role === "SUPER ADMIN" && (
               <Link
                 href="/admin-approval"
                 className="flex items-center justify-center space-x-2 px-3 py-2 bg-white text-amber-700 rounded-lg hover:bg-amber-500/20 transition-all duration-200 group border border-amber-200/50"
+                onClick={onClose}
               >
                 <Crown className="w-4 h-4" />
                 <span className="text-xs font-medium">Approve Admin</span>
@@ -237,97 +228,6 @@ export default function Sidebar({ children }: SidebarProps) {
           </div>
         </div>
       </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-30">
-          <div className="flex items-center justify-between p-4">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="lg:hidden p-2 rounded-xl bg-white shadow-sm border border-gray-200/60 hover:shadow-md transition-all"
-            >
-              <Menu className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div className="flex-1 flex items-center justify-between lg:justify-end space-x-4">
-              {/* System Status */}
-              <div className="hidden lg:flex items-center space-x-3">
-                <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-200/60">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-green-700">
-                    System Operational
-                  </span>
-                </div>
-              </div>
-
-              {/* Header Actions */}
-              <div className="flex items-center space-x-2">
-                {/* Refresh */}
-                <button
-                  onClick={handleRefresh}
-                  className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                </button>
-
-                {/* Notifications */}
-                <button className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60 relative">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                </button>
-
-                {/* Profile */}
-                <div className="flex items-center space-x-3 pl-2">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {currentUser.name}
-                    </p>
-                    <p className="text-xs text-gray-500">{currentUser.role}</p>
-                  </div>
-                  <div className="relative">
-                    <Image
-                      src="/izoh.jpg"
-                      alt="Profile"
-                      width={40}
-                      height={40}
-                      className="rounded-full border-2 border-white shadow-sm"
-                    />
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Search Bar Expansion */}
-          {isSearchOpen && (
-            <div className="px-4 pb-4">
-              <div className="relative max-w-2xl mx-auto">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search tasks, users, payments..."
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200/60 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500/50 transition-all"
-                  autoFocus
-                />
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
-        </header>
-
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-gradient-to-br from-gray-50/50 to-white/30">
-          {children}
-        </main>
-      </div>
-    </div>
+    </>
   );
 }

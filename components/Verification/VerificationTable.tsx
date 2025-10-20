@@ -53,9 +53,9 @@ export default function VerificationTable({
     );
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleString("en-US", {
+  const formatDate = (timestamp) => {
+    if (!timestamp) return "N/A";
+    return new Date(timestamp).toLocaleString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       month: "2-digit",
@@ -65,34 +65,22 @@ export default function VerificationTable({
   };
 
   const getVerificationStatus = (stage, verification) => {
-    const status = verification.verification_stages?.[stage];
-
-    // Handle different status values properly
-    if (status === "Verified") {
-      return "Verified";
-    } else if (status === "Pending") {
-      return "Pending";
-    } else {
-      return "Unverified";
-    }
+    return verification.verification_stages?.[stage] || "Unverified";
   };
 
   // Check if previous stages are verified for sequential flow
   const canVerifyStage = (stage, verification) => {
     switch (stage) {
       case "stage3":
-        // Stage 3 can always be verified as it's the first in sequence
         return getVerificationStatus("stage3", verification) === "Pending";
 
       case "stage4":
-        // Stage 4 can only be verified if Stage 3 is verified
         return (
           getVerificationStatus("stage3", verification) === "Verified" &&
           getVerificationStatus("stage4", verification) === "Pending"
         );
 
       case "stage5":
-        // Stage 5 (Final) can only be verified if both Stage 3 and Stage 4 are verified
         return (
           getVerificationStatus("stage3", verification) === "Verified" &&
           getVerificationStatus("stage4", verification) === "Verified" &&
@@ -130,82 +118,81 @@ export default function VerificationTable({
   const getStageImages = (stage, verification) => {
     switch (stage) {
       case "stage3": // Facial Verification
-        return [
-          {
-            url: verification.identification_images?.passport,
-            label: "Passport Photo",
+        const idImages = [];
+        if (verification.identification_images?.passport) {
+          idImages.push({
+            url: verification.identification_images.passport,
+            label: "Verified Identity",
             type: "passport",
-          },
-          {
-            url: verification.identification_images?.id_front,
-            label: "ID Front",
-            type: "id_front",
-          },
-          {
-            url: verification.identification_images?.id_back,
-            label: "ID Back",
-            type: "id_back",
-          },
-        ].filter((img) => img.url && !img.url.includes("null"));
+          });
+        }
+        return idImages;
 
       case "stage4": // Good Conduct Verification
-        return (
-          verification.work_images
-            ?.filter((img) => img && !img.includes("null"))
-            .map((img, index) => ({
-              url: img,
-              label: `Work Sample ${index + 1}`,
-              type: "work",
-            })) || []
-        );
+        const conductImages = [];
+        if (verification.good_conduct_image) {
+          conductImages.push({
+            url: verification.good_conduct_image,
+            label: "Good Conduct Certificate",
+            type: "good_conduct",
+          });
+        }
+        return conductImages;
 
-      case "stage5": // Final Verification
-        return [
-          ...(verification.identification_images?.passport &&
-          !verification.identification_images.passport.includes("null")
-            ? [
-                {
-                  url: verification.identification_images.passport,
-                  label: "Passport Photo",
-                  type: "passport",
-                },
-              ]
-            : []),
-          ...(verification.identification_images?.id_front &&
-          !verification.identification_images.id_front.includes("null")
-            ? [
-                {
-                  url: verification.identification_images.id_front,
-                  label: "ID Front",
-                  type: "id_front",
-                },
-              ]
-            : []),
-          ...(verification.identification_images?.id_back &&
-          !verification.identification_images.id_back.includes("null")
-            ? [
-                {
-                  url: verification.identification_images.id_back,
-                  label: "ID Back",
-                  type: "id_back",
-                },
-              ]
-            : []),
-          ...(verification.work_images
-            ?.filter((img) => img && !img.includes("null"))
-            .map((img, index) => ({
-              url: img,
-              label: `Work Sample ${index + 1}`,
-              type: "work",
-            })) || []),
-        ];
+      case "stage5": // Final Verification - Show all available images
+        const allImages = [];
+        if (verification.identification_images?.passport) {
+          allImages.push({
+            url: verification.identification_images.passport,
+            label: "Verified Identity",
+            type: "passport",
+          });
+        }
+        if (verification.good_conduct_image) {
+          allImages.push({
+            url: verification.good_conduct_image,
+            label: "Good Conduct Certificate",
+            type: "good_conduct",
+          });
+        }
+        return allImages;
 
       default:
         return [];
     }
   };
 
-  // Image display component - removed action buttons from individual images
+  // Get referral information
+  const getReferralInfo = (verification) => {
+    const ref = verification.verificationReferral;
+    if (!ref) return null;
+
+    return [
+      {
+        name: `${ref.ref1FName} ${ref.ref1LName}`,
+        id: ref.ref1IdNumber,
+        phone: ref.ref1Tell,
+        relationship: ref.ref1Relationship,
+        location: ref.ref1Location
+      },
+      {
+        name: `${ref.ref2FName} ${ref.ref2LName}`,
+        id: ref.ref2IdNumber,
+        phone: ref.ref2Tell,
+        relationship: ref.ref2Relationship,
+        location: ref.ref2Location
+      },
+      {
+        name: `${ref.ref3FName} ${ref.ref3LName}`,
+        id: ref.ref3IdNumber,
+        phone: ref.ref3Tell,
+        relationship: ref.ref3Relationship,
+        location: ref.ref3Location
+      }
+    ].filter(ref => ref.name.trim() !== "");
+  };
+
+  // Image display component
   const ImageDisplay = ({ image }) => {
     const [imageError, setImageError] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
@@ -216,7 +203,6 @@ export default function VerificationTable({
     };
 
     const handleImageLoad = () => {
-      console.log("Image loaded successfully:", image.url);
       setImageLoaded(true);
     };
 
@@ -397,20 +383,29 @@ export default function VerificationTable({
                             <p className="text-gray-600">
                               {verification.tasker.email}
                             </p>
+                            <p className="text-sm text-gray-500">
+                              Tasker Status: {verification.tasker.tasker_application_status}
+                            </p>
                           </div>
                         </div>
 
-                        {/* About Section */}
-                        {verification.tasker_about && (
-                          <div className="mb-6">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-3">
-                              About
-                            </h4>
-                            <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                              {verification.tasker_about}
-                            </p>
+                        {/* Referral Information */}
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                            Referral Information
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {getReferralInfo(verification)?.map((ref, index) => (
+                              <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                                <h5 className="font-medium text-gray-900">{ref.name}</h5>
+                                <p className="text-sm text-gray-600">ID: {ref.id}</p>
+                                <p className="text-sm text-gray-600">Phone: {ref.phone}</p>
+                                <p className="text-sm text-gray-600">Relationship: {ref.relationship}</p>
+                                <p className="text-sm text-gray-600">Location: {ref.location}</p>
+                              </div>
+                            ))}
                           </div>
-                        )}
+                        </div>
 
                         {/* Facial Verification (Stage 3) */}
                         <div className="mb-6 p-4 border border-gray-200 rounded-lg">
@@ -456,10 +451,9 @@ export default function VerificationTable({
 
                           <div>
                             <h5 className="font-medium text-gray-900 mb-4">
-                              Identification Documents
+                              Identity Verification
                             </h5>
-                            {getStageImages("stage3", verification).length >
-                            0 ? (
+                            {getStageImages("stage3", verification).length > 0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage3", verification).map(
                                   (image, index) => (
@@ -470,7 +464,7 @@ export default function VerificationTable({
                             ) : (
                               <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
                                 <p className="text-gray-500">
-                                  No identification documents uploaded
+                                  No identity verification image uploaded
                                 </p>
                               </div>
                             )}
@@ -521,10 +515,9 @@ export default function VerificationTable({
 
                           <div>
                             <h5 className="font-medium text-gray-900 mb-4">
-                              Work Samples
+                              Good Conduct Certificate
                             </h5>
-                            {getStageImages("stage4", verification).length >
-                            0 ? (
+                            {getStageImages("stage4", verification).length > 0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {getStageImages("stage4", verification).map(
                                   (image, index) => (
@@ -535,18 +528,18 @@ export default function VerificationTable({
                             ) : (
                               <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
                                 <p className="text-gray-500">
-                                  No work samples uploaded
+                                  No good conduct certificate uploaded
                                 </p>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Office Appointment Verification (Final) */}
+                        {/* Final Verification (Stage 5) */}
                         <div className="mb-6 p-4 border border-gray-200 rounded-lg">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900">
-                              Office Appointment Verification (Final)
+                              Final Verification (Stage 5)
                             </h4>
                             <div className="flex items-center space-x-4">
                               <span
@@ -578,7 +571,7 @@ export default function VerificationTable({
                                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
                                 >
                                   <CheckCircle className="w-4 h-4 mr-2" />
-                                  Verify Stage 5
+                                  Final Verification
                                 </button>
                               )}
                             </div>
@@ -588,10 +581,7 @@ export default function VerificationTable({
                             {/* Information Paragraph */}
                             <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
                               <p className="text-gray-700">
-                                This is the final and most important
-                                verification step. Approval here will fully
-                                verify the tasker and grant them access to the
-                                platform.
+                                This is the final verification step. Approval here will fully verify the tasker and grant them complete platform access.
                               </p>
                             </div>
 
@@ -609,12 +599,7 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Stage 3</p>
                                 <p>
-                                  {getVerificationStatus(
-                                    "stage3",
-                                    verification
-                                  ) === "Verified"
-                                    ? "✓ Verified"
-                                    : "Pending"}
+                                  {getVerificationStatus("stage3", verification)}
                                 </p>
                               </div>
                               <div
@@ -629,12 +614,7 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Stage 4</p>
                                 <p>
-                                  {getVerificationStatus(
-                                    "stage4",
-                                    verification
-                                  ) === "Verified"
-                                    ? "✓ Verified"
-                                    : "Pending"}
+                                  {getVerificationStatus("stage4", verification)}
                                 </p>
                               </div>
                               <div
@@ -649,12 +629,7 @@ export default function VerificationTable({
                               >
                                 <p className="font-semibold">Final</p>
                                 <p>
-                                  {getVerificationStatus(
-                                    "stage5",
-                                    verification
-                                  ) === "Verified"
-                                    ? "✓ Verified"
-                                    : "Pending"}
+                                  {getVerificationStatus("stage5", verification)}
                                 </p>
                               </div>
                             </div>
@@ -664,15 +639,11 @@ export default function VerificationTable({
                               "Pending" &&
                               (getVerificationStatus("stage3", verification) !==
                                 "Verified" ||
-                                getVerificationStatus(
-                                  "stage4",
-                                  verification
-                                ) !== "Verified") && (
+                                getVerificationStatus("stage4", verification) !== "Verified") && (
                                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                                   <p className="text-yellow-700">
                                     <strong>Prerequisites Required:</strong>{" "}
-                                    Stage 3 and Stage 4 must be verified before
-                                    final approval.
+                                    Stage 3 and Stage 4 must be verified before final approval.
                                   </p>
                                 </div>
                               )}
@@ -682,20 +653,11 @@ export default function VerificationTable({
                               "Verified" && (
                               <div className="bg-green-50 border-l-4 border-green-400 p-4">
                                 <p className="text-green-700">
-                                  <strong>✓ Tasker Fully Verified:</strong> This
-                                  tasker has been completely verified and
-                                  granted platform access.
+                                  <strong>✓ Tasker Fully Verified:</strong> This tasker has been completely verified and granted platform access.
                                 </p>
                               </div>
                             )}
                           </div>
-                        </div>
-
-                        {/* Vetted & Verified Section */}
-                        <div className="mt-6 pt-4 border-t border-gray-200">
-                          <p className="text-sm text-gray-600">
-                            Vetted & Verified by: System Administrator
-                          </p>
                         </div>
                       </div>
                     </td>

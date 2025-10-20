@@ -4,34 +4,50 @@ export interface LoginCredentials {
 }
 
 export interface User {
-  _id: string;
-  name: string;
-  email?: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
   phone_number: string;
   role: "ADMIN" | "SUPER ADMIN" | "USER";
   avatar_url?: string;
-  created_at?: Date;
-  updated_at?: Date;
+  isTasker: boolean;
+  isPhone_number_verified: boolean;
+  created_at: string;
 }
 
 export interface AuthResponse {
   success: boolean;
-  user?: User;
+  userWithReviews?: {
+    user: User;
+  };
+  token?: string;
   message?: string;
 }
 
-// Auth service functions using Next.js API routes
+// Auth service functions using direct API calls
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    console.log("Login attempt with:", credentials);
-
-    const response = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
+    console.log("Login attempt with:", {
+      ...credentials,
+      password: "[HIDDEN]",
     });
+
+    // Use URLSearchParams for form data as required by backend
+    const formData = new URLSearchParams();
+    formData.append("phone_number", credentials.phone_number);
+    formData.append("password", credentials.password);
+
+    const response = await fetch(
+      "https://tasksfy.com/v1/web/admin/users/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+      }
+    );
 
     const data = await response.json();
     console.log("Login API response:", data);
@@ -40,54 +56,10 @@ export const authService = {
       throw new Error(data.message || "Login failed");
     }
 
-    // Store user data
-    if (data.success && data.user) {
-      localStorage.setItem("tasksfyUser", JSON.stringify(data.user));
-      console.log("User stored in localStorage");
-      // console.log("Stored user:", data.user);
-    }
-
+    // Return the data directly - let the component handle storing in context
     return data;
   },
 
-  isAuthenticated(): boolean {
-    if (typeof window === "undefined") {
-      console.log("SSR mode - returning false");
-      return false;
-    }
-
-    try {
-      const user = localStorage.getItem("tasksfyUser");
-      console.log("Retrieved from storage:", user);
-
-      if (!user) {
-        console.log("No user found in storage");
-        return false;
-      }
-
-      const userData: User = JSON.parse(user);
-      const isAuth =
-        userData.role === "ADMIN" || userData.role === "SUPER ADMIN";
-      console.log("User role:", userData.role, "Authenticated:", isAuth);
-
-      return isAuth;
-    } catch (error) {
-      console.error("Auth check error:", error);
-      return false;
-    }
-  },
-
-  // Get current user
-  getCurrentUser(): User | null {
-    if (typeof window === "undefined") return null;
-
-    const user = localStorage.getItem("tasksfyUser");
-    if (!user) return null;
-
-    try {
-      return JSON.parse(user);
-    } catch {
-      return null;
-    }
-  },
+  // These functions are now handled by the AuthContext
+  // No more localStorage operations here
 };

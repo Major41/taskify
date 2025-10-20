@@ -37,6 +37,8 @@ export default function TaskersTable({
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [selectedTasker, setSelectedTasker] = useState<Tasker | null>(null);
 
+  console.log("Rendering TaskersTable with taskers:", taskers);
+
   const toggleDropdown = (taskerId: string) => {
     setActiveDropdown(activeDropdown === taskerId ? null : taskerId);
   };
@@ -166,7 +168,7 @@ export default function TaskersTable({
                     <div className="relative w-14 h-14">
                       <Image
                         src={
-                          tasker.avatar_url ||
+                          tasker.profile_picture ||
                           "/assets/images/users/default-avatar.jpg"
                         }
                         alt={tasker.name}

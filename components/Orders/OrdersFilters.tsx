@@ -12,23 +12,23 @@ interface OrdersFiltersProps {
   filteredCount: number;
   statusCounts?: {
     all: number;
-    pending: number;
-    expired: number;
-    negotiation: number;
-    ongoing: number;
-    cancelled: number;
-    completed: number;
+    Pending: number;
+    Expired: number;
+    Declined: number;
+    Accepted: number;
+    Completed: number;
+    Cancelled: number;
   };
 }
 
 const statusTabs = [
-  { value: "all", label: "All Orders" },
+  { value: "all", label: "All Requests" },
   { value: "Pending", label: "Pending" },
   { value: "Expired", label: "Expired" },
-  { value: "In Negotiation", label: "In Negotiation" },
-  { value: "Ongoing", label: "Ongoing" },
-  { value: "Cancelled", label: "Cancelled" },
+  { value: "Declined", label: "Declined" },
+  { value: "Accepted", label: "Accepted" },
   { value: "Completed", label: "Completed" },
+  { value: "Cancelled", label: "Cancelled" },
 ];
 
 export default function OrdersFilters({
@@ -63,7 +63,7 @@ export default function OrdersFilters({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search orders..."
+          placeholder="Search requests..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full text-black pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500/30 transition-all"

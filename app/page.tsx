@@ -6,6 +6,7 @@ import Image from "next/image";
 import { authService, LoginCredentials } from "@/lib/auth";
 import { Phone, Lock, LogIn, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("");
@@ -35,43 +36,69 @@ export default function LoginPage() {
     return phoneNumber;
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      const internationalPhone = formatToInternational(phone);
+  try {
+    const internationalPhone = formatToInternational(phone);
+    console.log("Formatted Phone:", internationalPhone);
 
-      const credentials: LoginCredentials = {
-        phone_number: internationalPhone,
-        password: password,
+    // Use authService.login instead of direct axios call
+    const credentials: LoginCredentials = {
+      phone_number: internationalPhone,
+      password: password,
+    };
+
+    const response = await authService.login(credentials);
+    console.log("Login response:", response);
+
+    if (response.success && response.userWithReviews?.user) {
+      // Map the backend response to your User interface
+      const userData = {
+        user_id: response.userWithReviews.user.user_id,
+        first_name: response.userWithReviews.user.first_name,
+        last_name: response.userWithReviews.user.last_name,
+        email: response.userWithReviews.user.email,
+        phone_number: response.userWithReviews.user.phone_number,
+        avatar_url: response.userWithReviews.user.profile_url,
+        isTasker: response.userWithReviews.user.isTasker,
+        role: response.userWithReviews.user.role,
+        isPhone_number_verified:
+          response.userWithReviews.user.isPhone_number_verified,
+        created_at: response.userWithReviews.user.created_at,
       };
 
-      console.log("Sending credentials:", credentials);
+      // Use the context to login with both user data and token
+      login(userData, response.token);
 
-      const response = await authService.login(credentials);
-
-      if (response.success && response.user) {
-        // Use the context to login instead of localStorage directly
-        login(response.user);
-
-        // Redirect to dashboard
-        router.push("/dashboard");
-      } else {
-        setError(
-          response.message || "Login failed. Please check your credentials."
-        );
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      setError(error.message || "Login failed. Please try again.");
-    } finally {
-      setLoading(false);
+      // Redirect to dashboard
+      router.push("/dashboard");
+    } else {
+      setError(
+        response.message || "Login failed. Please check your credentials."
+      );
     }
-  };
+  } catch (error: any) {
+    console.error("Login error:", error);
 
-  // ... rest of your existing code (formatPhoneDisplay, handlePhoneChange, etc.)
+    // More specific error handling
+    if (error.message?.includes("Incorrect phoneNumber")) {
+      setError("Incorrect phone number. Please check your phone number.");
+    } else if (error.message?.includes("Incorrect username or password")) {
+      setError("Incorrect password. Please try again.");
+    } else if (error.message?.includes("Access denied")) {
+      setError("Access denied. Admin privileges required.");
+    } else {
+      setError(error.message || "Login failed. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+  
+
   const formatPhoneDisplay = (value: string) => {
     const digits = value.replace(/\D/g, "");
 

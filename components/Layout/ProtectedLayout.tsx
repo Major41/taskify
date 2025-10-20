@@ -1,48 +1,51 @@
+// components/Layout/ProtectedLayout.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import Sidebar from "./Sidebar";
-import { authService } from "@/lib/auth";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
-interface ProtectedLayoutProps {
+
+export default function ProtectedLayout({
+  children,
+}: {
   children: React.ReactNode;
-}
-
-export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+}) {
+  const { user, loading, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
+    // If not loading and not authenticated, redirect to login
+    if (!loading && !isAuthenticated) {
+      console.log("Not authenticated, redirecting to login");
+      router.push("/");
+    }
+  }, [loading, isAuthenticated, router]);
 
-      if (!authenticated) {
-        router.push("/");
-        setIsAuthenticated(false);
-        return;
-      }
-
-      setIsAuthenticated(true);
-    };
-
-    checkAuth();
-  }, [router]);
-
-  if (isAuthenticated === null) {
+  // Show loading spinner while checking authentication
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking authentication...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     );
   }
 
+  // If not authenticated, don't render children (will redirect)
   if (!isAuthenticated) {
-    return null; // Will redirect to login page
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
-  return <Sidebar>{children}</Sidebar>;
+  // If authenticated, render the protected content
+  return <>{children}</>;
 }

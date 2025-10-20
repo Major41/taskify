@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       "localhost",
       "127.0.0.1",
       "tasksfy.com",
+      "192.168.100.6",
       // Add other domains you use for images
     ],
     remotePatterns: [
@@ -32,6 +33,12 @@ const nextConfig: NextConfig = {
         hostname: "192.168.225.93",
         port: "8080",
         pathname: "/image_3_pictures/**",
+      },
+      {
+        protocol: "http",
+        hostname: "192.168.100.6", 
+        port: "8080",
+        pathname: "/**",
       },
       {
         protocol: "http",

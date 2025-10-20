@@ -27,6 +27,8 @@ export default function ApplicationsTable({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
+  // console.log("ApplicationsTable received applications:", applications);
+
   const toggleDropdown = (applicationId) => {
     setActiveDropdown(activeDropdown === applicationId ? null : applicationId);
   };
@@ -62,7 +64,10 @@ export default function ApplicationsTable({
   const viewApplicationDetails = (application) => {
     setSelectedApplication(application);
     setShowDetailsModal(true);
+    setActiveDropdown(null);
   };
+
+  // console.log("selected application:", selectedApplication);
 
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
@@ -205,7 +210,7 @@ export default function ApplicationsTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date of Application
               </th>
-             
+
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
@@ -217,7 +222,7 @@ export default function ApplicationsTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {applications.map((application) => (
               <tr
-                key={application._id}
+                key={application.user_id}
                 className={`
                   hover:bg-gray-50/50 transition-colors
                   ${application.status === "approved" ? "bg-green-50/30" : ""}
@@ -226,10 +231,10 @@ export default function ApplicationsTable({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Image
                     src={
-                      application.user.avatar_url ||
+                      application.profile_url ||
                       "/assets/images/users/default-avatar.jpg"
                     }
-                    alt={application.user.name}
+                    alt={application.first_name}
                     width={40}
                     height={40}
                     className="rounded-lg"
@@ -237,20 +242,20 @@ export default function ApplicationsTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {application.user.name}
+                    {application.first_name}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {application.user.phone}
+                    {application.phone_number}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {formatDate(application.appliedAt)}
+                    {formatDate(application.created_at)}
                   </div>
                 </td>
-               
+
                 <td className="px-6 py-4 whitespace-nowrap">
                   {getStatusBadge(application.status)}
                 </td>
@@ -259,7 +264,9 @@ export default function ApplicationsTable({
                     {/* Quick Actions for Pending Applications */}
                     {application.status === "pending" && (
                       <button
-                        onClick={() => onApproveApplication(application._id)}
+                        onClick={() =>
+                          onApproveApplication(application.user_id)
+                        }
                         className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
                       >
                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -270,19 +277,18 @@ export default function ApplicationsTable({
                     {/* View Details Dropdown */}
                     <div className="relative">
                       <button
-                        onClick={() => toggleDropdown(application._id)}
+                        onClick={() => toggleDropdown(application.user_id)}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                       >
                         <MoreVertical className="w-4 h-4 text-gray-600" />
                       </button>
 
-                      {activeDropdown === application._id && (
+                      {activeDropdown === application.user_id && (
                         <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                           <div className="py-1">
                             <button
                               onClick={() => {
                                 viewApplicationDetails(application);
-                                setActiveDropdown(null);
                               }}
                               className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
@@ -294,7 +300,7 @@ export default function ApplicationsTable({
                               <>
                                 <button
                                   onClick={() => {
-                                    onApproveApplication(application._id);
+                                    onApproveApplication(application.user_id);
                                     setActiveDropdown(null);
                                   }}
                                   className="flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50"
@@ -304,11 +310,6 @@ export default function ApplicationsTable({
                                 </button>
                               </>
                             )}
-
-                            <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                              <MessageCircle className="w-4 h-4 mr-2" />
-                              Message Applicant
-                            </button>
                           </div>
                         </div>
                       )}
@@ -326,6 +327,8 @@ export default function ApplicationsTable({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
+              
+
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                   Tasker Application Details
@@ -339,27 +342,27 @@ export default function ApplicationsTable({
               </div>
 
               {/* Profile Header */}
+              {/* Profile Header */}
               <div className="flex items-center space-x-4 mb-6">
                 <Image
                   src={
-                    selectedApplication.user.avatar_url ||
+                    selectedApplication.profile_url ||
                     "/assets/images/users/default-avatar.jpg"
                   }
-                  alt={selectedApplication.user.name}
+                  alt={selectedApplication.first_name}
                   width={60}
                   height={60}
                   className="rounded-lg"
                 />
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
-                    {selectedApplication.user.name}
+                    {selectedApplication.first_name}{" "}
+                    {selectedApplication.last_name}
                   </h3>
                   <p className="text-gray-600">
-                    {selectedApplication.user.phone}
+                    {selectedApplication.phone_number}
                   </p>
-                  <p className="text-gray-600">
-                    {selectedApplication.user.email}
-                  </p>
+                  <p className="text-gray-600">{selectedApplication.email}</p>
                 </div>
               </div>
 
@@ -539,7 +542,7 @@ export default function ApplicationsTable({
                 <div className="flex space-x-4 pt-6 border-t">
                   <button
                     onClick={() => {
-                      onApproveApplication(selectedApplication._id);
+                      onApproveApplication(selectedApplication.user_id);
                       closeDetailsModal();
                     }}
                     className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"

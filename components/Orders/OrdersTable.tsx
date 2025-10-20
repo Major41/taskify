@@ -31,6 +31,8 @@ export default function OrdersTable({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // console.log("OrdersTable received orders:", orders);
+
   const toggleDropdown = (orderId: string) => {
     setActiveDropdown(activeDropdown === orderId ? null : orderId);
   };
@@ -109,7 +111,6 @@ export default function OrdersTable({
   // Debug: Log the actual status values from your orders
   if (orders.length > 0) {
     const uniqueStatuses = [...new Set(orders.map((order) => order.status))];
-    console.log("Unique status values in orders:", uniqueStatuses);
   }
 
   if (orders.length === 0) {
