@@ -40,11 +40,14 @@ export default function TaskersPage() {
   const loadTaskers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("https://tasksfy.com/v1/web/admin/taskersWithReviews", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/admin/taskersWithReviews",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch taskers");
@@ -66,17 +69,18 @@ export default function TaskersPage() {
             phone: tasker.tasker.user?.phone_number,
             profile_picture: tasker.tasker.user?.profile_url,
             skills: tasker.skills || [],
-            rating: tasker.tasker.tasker_average_rating || 0,
-            completed_tasks: tasker.completed_tasks_count || 0,
+            rating: tasker.tasker.tasker_average_rating,
+            completed_tasks: tasker.completed_tasks_count,
             is_approved: tasker.tasker.is_approved,
             is_accepting_requests: tasker.tasker.is_accepting_requests,
             joined_date: tasker.tasker.tasker_reg_date,
             category: tasker.category,
             location: tasker.location,
-            veverification_level1_status:
+            address: tasker.tasker.user.address,
+            verification_level1_status:
               tasker.tasker.user.verification_level1_status,
             verification_level2_status:
-              tasker.tasker.user.verification_level1_status,
+              tasker.tasker.user.verification_level2_status,
             verification_level3_status:
               tasker.tasker.user.verification_level3_status,
             verification_level4_status:
@@ -86,6 +90,7 @@ export default function TaskersPage() {
             reviews: tasker.reviews || [],
             walletBalance: tasker.tasker.user.walletBalance,
             tasker_average_rating: tasker.tasker.tasker_average_rating,
+            isPhone_number_verified: tasker.tasker.user.isPhone_number_verified,
           })
         );
 

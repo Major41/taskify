@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, AlertCircle, Loader2, User } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  User,
+  CreditCard,
+  X,
+  CheckSquare,
+  TrendingUp,
+} from "lucide-react";
 
 interface WithdrawalRequest {
   _id: string;
@@ -32,6 +42,14 @@ export default function AdminWithdrawalsPage() {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "pending" | "processed"
   >("all");
+
+  // Dummy data for the cards
+  const [stats, setStats] = useState({
+    successfulPayments: 1247,
+    cancelledPayments: 89,
+    completedPayments: 1158,
+    netProfit: 284500,
+  });
 
   useEffect(() => {
     fetchWithdrawals();
@@ -183,6 +201,91 @@ export default function AdminWithdrawalsPage() {
           <span>{alert.message}</span>
         </div>
       )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Successful Payments Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">
+                Successful Payments
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                {stats.successfulPayments.toLocaleString()}
+              </p>
+              <p className="text-xs text-green-600 mt-1 flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                +12% from last month
+              </p>
+            </div>
+            <div className="p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Cancelled Payments Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">
+                Cancelled Payments
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                {stats.cancelledPayments.toLocaleString()}
+              </p>
+              <p className="text-xs text-red-600 mt-1 flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                +3% from last month
+              </p>
+            </div>
+            <div className="p-3 bg-red-50 rounded-lg">
+              <X className="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Completed Payments Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">
+                Completed Payments
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                {stats.completedPayments.toLocaleString()}
+              </p>
+              <p className="text-xs text-blue-600 mt-1 flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                +8% from last month
+              </p>
+            </div>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <CheckSquare className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Net Profit Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Net Profit</p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                KES {stats.netProfit.toLocaleString()}
+              </p>
+              <p className="text-xs text-purple-600 mt-1 flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                +15% from last month
+              </p>
+            </div>
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <CreditCard className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>

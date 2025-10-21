@@ -19,7 +19,8 @@ export default function DashboardHeader({
   const { user } = useAuth();
 
   const handleRefresh = () => {
-    router.refresh();
+    // Full page reload
+    window.location.reload();
   };
 
   const currentUser =
@@ -32,7 +33,27 @@ export default function DashboardHeader({
   return (
     <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-30">
       <div className="flex items-center justify-between p-4">
-        {/* Mobile menu button */}
+        {/* Mobile: Profile on left side */}
+        <div className="flex lg:hidden items-center space-x-3">
+          <div className="relative">
+            <Image
+              src="/izoh.jpg"
+              alt="Profile"
+              width={40}
+              height={40}
+              className="rounded-full border-2 border-white shadow-sm"
+            />
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-gray-900">
+              {currentUser.first_name} {currentUser.last_name}
+            </p>
+            <p className="text-xs text-gray-500">{currentUser.role}</p>
+          </div>
+        </div>
+
+        {/* Mobile menu button - moved to right side */}
         <button
           onClick={onMenuToggle}
           className="lg:hidden p-2 rounded-xl bg-white shadow-sm border border-gray-200/60 hover:shadow-md transition-all"
@@ -40,9 +61,10 @@ export default function DashboardHeader({
           <Menu className="w-5 h-5 text-gray-600" />
         </button>
 
-        <div className="flex-1 flex items-center justify-between lg:justify-end space-x-4">
+        {/* Desktop layout */}
+        <div className="hidden lg:flex flex-1 items-center justify-between lg:justify-end space-x-4">
           {/* System Status */}
-          <div className="hidden lg:flex items-center space-x-3">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-200/60">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               <span className="text-sm font-medium text-green-700">
@@ -53,31 +75,18 @@ export default function DashboardHeader({
 
           {/* Header Actions */}
           <div className="flex items-center space-x-2">
-            {/* Search */}
-            <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-
             {/* Refresh */}
             <button
               onClick={handleRefresh}
               className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60"
+              title="Refresh page"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
 
-            {/* Notifications */}
-            <button className="p-2.5 text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-sm border border-transparent hover:border-gray-200/60 relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-            </button>
-
             {/* Profile */}
             <div className="flex items-center space-x-3 pl-2">
-              <div className="text-right hidden sm:block">
+              <div className="text-right">
                 <p className="text-sm font-semibold text-gray-900">
                   {currentUser.first_name} {currentUser.last_name}
                 </p>
