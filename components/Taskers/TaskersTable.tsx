@@ -21,7 +21,7 @@ import SuspendModal from "./SuspendModal";
 
 interface TaskersTableProps {
   taskers: Tasker[];
-  onSuspendTasker: (taskerId: string, reason: string) => void;
+  onSuspendTasker: (taskerId: string) => void; 
   onReinstateTasker: (taskerId: string) => void;
   onSendMessage: (taskerId: string, message: string) => Promise<boolean>;
 }
@@ -48,7 +48,7 @@ export default function TaskersTable({
   };
 
   const getStatusBadge = (tasker: Tasker) => {
-    const isActive = tasker.is_approved && tasker.is_accepting_requests;
+    const isActive = tasker.is_approved;
 
     if (isActive) {
       return (
@@ -80,21 +80,26 @@ export default function TaskersTable({
     }
   };
 
-  const getDateApproved = (tasker: Tasker) => {
-    if (tasker.is_approved) {
-      return tasker.updatedAt ? formatDate(tasker.updatedAt) : "Approved";
+const getDateApproved = (tasker: Tasker) => {
+  if (tasker.is_approved) {
+    // If we have an updatedAt date, use it, otherwise use joined_date or show generic text
+    return tasker.updatedAt ? formatDate(tasker.updatedAt) : 
+           tasker.joined_date ? formatDate(tasker.joined_date) : "Approved";
+  }
+  return "Not Approved";
+};
+
+  const handleSuspendClick = async (taskerId: string) => {
+    if (confirm("Are you sure you want to suspend this tasker?")) {
+      await onSuspendTasker(taskerId);
     }
-    return "Not Approved";
   };
 
-  const handleSuspendClick = (tasker: Tasker) => {
-    setSelectedTasker(tasker);
-    setShowSuspendModal(true);
-  };
-
-  const handleSuspendConfirm = async (reason: string) => {
+  const handleSuspendConfirm = async () => {
+    // Removed reason parameter
     if (selectedTasker) {
-      await onSuspendTasker(selectedTasker._id, reason);
+      // console.log("Suspending tasker with ID:", selectedTasker);
+      await onSuspendTasker(selectedTasker.id); // Only pass tasker ID
       setShowSuspendModal(false);
       setSelectedTasker(null);
     }
@@ -153,16 +158,16 @@ export default function TaskersTable({
             {taskers.map((tasker) => (
               <>
                 <tr
-                  key={tasker._id}
+                  key={tasker.id}
                   className={`
                     hover:bg-gray-50/50 transition-colors cursor-pointer
                     ${
-                      tasker.is_approved && tasker.is_accepting_requests
+                      tasker.is_approved
                         ? "bg-green-50/30"
                         : "bg-red-50/30"
                     }
                   `}
-                  onClick={() => toggleRowExpansion(tasker._id)}
+                  onClick={() => toggleRowExpansion(tasker.id)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="relative w-14 h-14">
@@ -217,11 +222,11 @@ export default function TaskersTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex flex-col space-y-2 min-w-[120px]">
-                      {tasker.is_approved && tasker.is_accepting_requests ? (
+                      {tasker.is_approved  ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSuspendClick(tasker);
+                            handleSuspendClick(tasker.id);
                           }}
                           className="inline-flex items-center justify-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
                         >
@@ -232,7 +237,7 @@ export default function TaskersTable({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleReinstate(tasker._id);
+                            handleReinstate(tasker.id);
                           }}
                           className="inline-flex items-center justify-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
                         >
@@ -245,7 +250,7 @@ export default function TaskersTable({
                 </tr>
 
                 {/* Expanded Details Row */}
-                {expandedRow === tasker._id && (
+                {expandedRow === tasker.id && (
                   <tr className="bg-gray-50/50">
                     <td colSpan={7} className="px-6 py-4">
                       <TaskerDetails
@@ -261,14 +266,14 @@ export default function TaskersTable({
         </table>
       </div>
 
-      {/* Suspend Modal */}
+      {/* Suspend Modal - Updated to not require reason */}
       <SuspendModal
         isOpen={showSuspendModal}
         onClose={() => {
           setShowSuspendModal(false);
           setSelectedTasker(null);
         }}
-        onConfirm={handleSuspendConfirm}
+        onConfirm={handleSuspendConfirm} // No reason parameter needed
         taskerName={selectedTasker?.name || ""}
       />
     </>

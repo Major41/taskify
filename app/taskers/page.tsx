@@ -54,7 +54,7 @@ export default function TaskersPage() {
       }
 
       const data = await response.json();
-      console.log("Taskers API Response:", data.taskersWithReviewsAndSkills); // Debug log
+      // console.log("Taskers API Response:", data.taskersWithReviewsAndSkills); // Debug log
 
       if (data.success && data.taskersWithReviewsAndSkills) {
         // Transform the API response to match our Tasker interface
@@ -111,11 +111,9 @@ export default function TaskersPage() {
       // Calculate stats from the taskers data
       const totalTaskers = taskers.length;
       const activeTaskers = taskers.filter(
-        (t) => t.is_approved && t.is_accepting_requests
-      ).length;
+        (t) => t.is_approved).length;
       const suspendedTaskers = taskers.filter(
-        (t) => !t.is_approved || !t.is_accepting_requests
-      ).length;
+        (t) => !t.is_approved).length;
       const totalCompletedTasks = taskers.reduce(
         (sum, tasker) => sum + (tasker.completed_tasks || 0),
         0
@@ -161,9 +159,7 @@ export default function TaskersPage() {
     // Filter by status
     if (selectedStatus !== "all") {
       filtered = filtered.filter((tasker) =>
-        selectedStatus === "active"
-          ? tasker.is_approved && tasker.is_accepting_requests
-          : !tasker.is_approved || !tasker.is_accepting_requests
+        selectedStatus === "active" ? tasker.is_approved : !tasker.is_approved
       );
     }
 
@@ -184,21 +180,18 @@ export default function TaskersPage() {
     setFilteredTaskers(filtered);
   };
 
-  const handleSuspendTasker = async (taskerId: string, reason: string) => {
+  // In your page.tsx - update the handleSuspendTasker function
+  const handleSuspendTasker = async (taskerId: string) => {
     try {
-      // Note: You'll need to implement the suspend API endpoint
-      const response = await fetch("/api/admin/taskers/update-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          taskerId,
-          action: "suspend",
-          reason,
-        }),
-      });
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${taskerId}&is_approved=false`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.ok) {
         await loadTaskers();
@@ -215,18 +208,15 @@ export default function TaskersPage() {
 
   const handleReinstateTasker = async (taskerId: string) => {
     try {
-      // Note: You'll need to implement the reinstate API endpoint
-      const response = await fetch("/api/admin/taskers/update-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          taskerId,
-          action: "reinstate",
-        }),
-      });
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${taskerId}&is_approved=true`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.ok) {
         await loadTaskers();

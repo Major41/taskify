@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardStats from "@/components/Dashboard/DashboardStats";
-import {useAuth} from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardData {
   pendingTasks: number;
@@ -30,6 +30,12 @@ interface DashboardData {
   };
 }
 
+interface User {
+  user_id: string;
+  isTasker: boolean;
+  // Add other user properties as needed
+}
+
 export default function DashboardPage() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -41,7 +47,46 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
-  // console.log("Current User:", user);
+  const fetchUsers = async (): Promise<{
+    taskers: number;
+    clients: number;
+  }> => {
+    try {
+      const response = await fetch("https://tasksfy.com/v1/web/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await response.json();
+      // console.log("Users API Response:", data);
+
+      // Count taskers and clients based on isTasker flag
+      let taskersCount = 0;
+      let clientsCount = 0;
+
+      if (data && Array.isArray(data)) {
+        data.forEach((user: User) => {
+          if (user.isTasker === true) {
+            taskersCount++;
+          } else {
+            clientsCount++;
+          }
+        });
+      }
+
+      console.log(`Taskers: ${taskersCount}, Clients: ${clientsCount}`);
+      return { taskers: taskersCount, clients: clientsCount };
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      // Return fallback values if API fails
+      return { taskers: 0, clients: 0 };
+    }
+  };
 
   const fetchRequestsByStatus = async (status: string): Promise<number> => {
     try {
@@ -84,9 +129,12 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
-      console.log(`Fetched ${status} requests:`, data.acceptedRequests.length);
+      console.log(
+        `Fetched ${status} requests:`,
+        data.acceptedRequests?.length || 0
+      );
 
-      return data.acceptedRequests.length || 0;
+      return data.acceptedRequests?.length || 0;
     } catch (error) {
       console.error(`Error fetching ${status} accepted requests:`, error);
       return 0;
@@ -95,15 +143,25 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
+      setLoading(true);
+
+      // Fetch users data first to get taskers and clients count
+      const { taskers, clients } = await fetchUsers();
+
       // Fetch requests data
-      const [pendingRequests, expiredRequests, declinedRequests, acceptedRequests, completedRequests] =
-        await Promise.all([
-          fetchRequestsByStatus("Pending"),
-          fetchRequestsByStatus("Expired"),
-          fetchRequestsByStatus("Declined"),
-          fetchRequestsByStatus("Accepted"),
-          fetchRequestsByStatus("Completed"),
-        ]);
+      const [
+        pendingRequests,
+        expiredRequests,
+        declinedRequests,
+        acceptedRequests,
+        completedRequests,
+      ] = await Promise.all([
+        fetchRequestsByStatus("Pending"),
+        fetchRequestsByStatus("Expired"),
+        fetchRequestsByStatus("Declined"),
+        fetchRequestsByStatus("Accepted"),
+        fetchRequestsByStatus("Completed"),
+      ]);
 
       // Fetch accepted requests data
       const [
@@ -122,16 +180,15 @@ export default function DashboardPage() {
         fetchAcceptedRequestsByStatus("Declined"),
       ]);
 
-      // For now, using mock data for other stats - you can replace with actual API calls
-      const mockData: DashboardData = {
+      const dashboardData: DashboardData = {
         pendingTasks: pendingAccepted,
         inNegotiation: inNegotiationAccepted,
         canceledTasks: cancelledAccepted,
         expiredTasks: expiredRequests,
         ongoingTasks: ongoingAccepted,
         completedTasks: completedAccepted,
-        taskers: 71012,
-        clients: 120021,
+        taskers: taskers, // Use actual count from API
+        clients: clients, // Use actual count from API
         requests: {
           pending: pendingRequests,
           expired: expiredRequests,
@@ -149,11 +206,11 @@ export default function DashboardPage() {
         },
       };
 
-      setDashboardData(mockData);
+      setDashboardData(dashboardData);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
       // Fallback to mock data if API fails
-      const mockData: DashboardData = {
+      const fallbackData: DashboardData = {
         pendingTasks: 102,
         inNegotiation: 203,
         canceledTasks: 56,
@@ -178,7 +235,7 @@ export default function DashboardPage() {
           declined: 12,
         },
       };
-      setDashboardData(mockData);
+      setDashboardData(fallbackData);
     } finally {
       setLoading(false);
     }

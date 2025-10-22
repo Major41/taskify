@@ -40,11 +40,14 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const response = await fetch("https://tasksfy.com/v1/web/admin/clientsWithReviews", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/admin/clientsWithReviews",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch clients");
@@ -67,14 +70,14 @@ export default function ClientsPage() {
           phone: user.user.phone_number || "No phone",
           profile_picture: user.user.profile_url,
           address: user.user.address || "Not specified",
-          is_approved: user.user.is_approved || true, // Clients are typically approved by default
+          is_approved: user.user.isClientApproved, // Clients are typically approved by default
           joined_date: user.user.dateOfRegistration,
           total_requests: user.user.total_requests || 0,
           completed_requests: user.user.completed_requests || 0,
           is_active: user.user.is_active !== false, // Default to active if not specified
           isPhone_number_verified: user.user.isPhone_number_verified || false,
-          reviews:user.client_reviews,
-          client_average_rating:user.user.client_average_rating,
+          reviews: user.client_reviews,
+          client_average_rating: user.user.client_average_rating,
           walletBalance: user.user.walletBalance,
         }));
 
@@ -94,8 +97,12 @@ export default function ClientsPage() {
     try {
       // Calculate stats from the clients data
       const totalClients = clients.length;
-      const activeClients = clients.filter((c) => c.is_active).length;
-      const inactiveClients = clients.filter((c) => !c.is_active).length;
+      const activeClients = clients.filter(
+        (c) => c.is_active && c.is_approved
+      ).length;
+      const inactiveClients = clients.filter(
+        (c) => !c.is_active || !c.is_approved
+      ).length;
       const totalRequests = clients.reduce(
         (sum, client) => sum + (client.total_requests || 0),
         0
@@ -140,7 +147,9 @@ export default function ClientsPage() {
     // Filter by status
     if (selectedStatus !== "all") {
       filtered = filtered.filter((client) =>
-        selectedStatus === "active" ? client.is_active : !client.is_active
+        selectedStatus === "active"
+          ? client.is_active && client.is_approved
+          : !client.is_active || !client.is_approved
       );
     }
 
@@ -159,48 +168,154 @@ export default function ClientsPage() {
     setFilteredClients(filtered);
   };
 
- const handleSendMessage = async (clientId: string, message: string) => {
-   try {
-     if (!token) {
-       throw new Error("Authentication token not found");
-     }
+  // In your app/clients/page.tsx - update the handleSuspendClient function
+  const handleSuspendClient = async (clientId: string) => {
+    try {
+      console.log("Suspending client with ID:", clientId);
 
-     // Construct the URL with query parameters
-     const url = `https://tasksfy.com/v1/web/admin/message/user/by/id/send?user_id=${clientId}&message=${encodeURIComponent(
-       message
-     )}`;
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${clientId}&is_approved=false`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-     const response = await fetch(url, {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         Authorization: `Bearer ${token}`,
-       },
-       // Since the message is in the URL, you might not need a body
-       // But if the API expects a body, you can include it
-       body: JSON.stringify({
-         user_id: clientId,
-         message: message,
-       }),
-     });
+      // Check if response is OK first
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-     if (response.ok) {
-       const result = await response.json();
-       console.log("Message sent successfully:", result);
-       alert("Message sent successfully!");
-       return true;
-     } else {
-       const errorData = await response.json();
-       console.error("Failed to send message:", errorData);
-       throw new Error(errorData.message || "Failed to send message");
-     }
-   } catch (error) {
-     console.error("Failed to send message:", error);
-     alert("Failed to send message. Please try again.");
-     return false;
-   }
+      // Check if response has content before trying to parse JSON
+      const contentType = response.headers.get("content-type");
+      let responseData;
+
+      if (contentType && contentType.includes("application/json")) {
+        responseData = await response.json();
+        console.log("Suspend Client API Response:", responseData);
+      } else {
+        // If no JSON response, check if response is successful
+        const textResponse = await response.text();
+        console.log("Suspend Client API Text Response:", textResponse);
+
+        // If we get an empty response but status is OK, consider it successful
+        if (response.ok) {
+          responseData = { success: true };
+        } else {
+          throw new Error(`Non-JSON response: ${textResponse}`);
+        }
+      }
+
+      if (responseData.success) {
+        alert("Client suspended successfully!");
+        await loadClients();
+        await loadClientStats();
+      } else {
+        throw new Error(responseData.message || "Failed to suspend client");
+      }
+    } catch (error) {
+      console.error("Failed to suspend client:", error);
+      alert("Failed to suspend client. Please try again.");
+    }
   };
-  
+
+  // Also update the handleReinstateClient function similarly
+  const handleReinstateClient = async (clientId: string) => {
+    try {
+      console.log("Reinstating client with ID:", clientId);
+
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${clientId}&is_approved=true`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Check if response is OK first
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response has content before trying to parse JSON
+      const contentType = response.headers.get("content-type");
+      let responseData;
+
+      if (contentType && contentType.includes("application/json")) {
+        responseData = await response.json();
+        console.log("Reinstate Client API Response:", responseData);
+      } else {
+        // If no JSON response, check if response is successful
+        const textResponse = await response.text();
+        console.log("Reinstate Client API Text Response:", textResponse);
+
+        // If we get an empty response but status is OK, consider it successful
+        if (response.ok) {
+          responseData = { success: true };
+        } else {
+          throw new Error(`Non-JSON response: ${textResponse}`);
+        }
+      }
+
+      if (responseData.success) {
+        alert("Client reinstated successfully!");
+        await loadClients();
+        await loadClientStats();
+      } else {
+        throw new Error(responseData.message || "Failed to reinstate client");
+      }
+    } catch (error) {
+      console.error("Failed to reinstate client:", error);
+      alert("Failed to reinstate client. Please try again.");
+    }
+  };
+
+  const handleSendMessage = async (clientId: string, message: string) => {
+    try {
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      // Construct the URL with query parameters
+      const url = `https://tasksfy.com/v1/web/admin/message/user/by/id/send?user_id=${clientId}&message=${encodeURIComponent(
+        message
+      )}`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        // Since the message is in the URL, you might not need a body
+        // But if the API expects a body, you can include it
+        body: JSON.stringify({
+          user_id: clientId,
+          message: message,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Message sent successfully:", result);
+        alert("Message sent successfully!");
+        return true;
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to send message:", errorData);
+        throw new Error(errorData.message || "Failed to send message");
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      alert("Failed to send message. Please try again.");
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -241,11 +356,13 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Clients Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <ClientsTable
           clients={filteredClients}
+          onSuspendClient={handleSuspendClient}
+          onReinstateClient={handleReinstateClient}
           onSendMessage={handleSendMessage}
         />
       </div>

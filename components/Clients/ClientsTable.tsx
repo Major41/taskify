@@ -17,11 +17,10 @@ import {
 } from "lucide-react";
 import { Client } from "@/types/client";
 import ClientDetails from "./ClientDetails";
-import SuspendModal from "./SuspendModal";
 
 interface ClientsTableProps {
   clients: Client[];
-  onSuspendClient: (clientId: string, reason: string) => void;
+  onSuspendClient: (clientId: string) => void;
   onReinstateClient: (clientId: string) => void;
   onSendMessage: (clientId: string, message: string) => Promise<boolean>;
 }
@@ -34,8 +33,8 @@ export default function ClientsTable({
 }: ClientsTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [showSuspendModal, setShowSuspendModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  console.log("Clients data in ClientsTable:", clients);
 
   const toggleDropdown = (clientId: string) => {
     setActiveDropdown(activeDropdown === clientId ? null : clientId);
@@ -80,25 +79,18 @@ export default function ClientsTable({
 
   const getDateApproved = (client: Client) => {
     if (client.is_approved) {
-      return client.updatedAt ? formatDate(client.updatedAt) : "Approved";
+      return "Approved"; // Since we don't have updatedAt in the data
     }
     return "Not Approved";
   };
 
-  const handleSuspendClick = (client: Client) => {
-    setSelectedClient(client);
-    setShowSuspendModal(true);
-  };
-
-  const handleSuspendConfirm = async (reason: string) => {
-    if (selectedClient) {
-      await onSuspendClient(selectedClient._id, reason);
-      setShowSuspendModal(false);
-      setSelectedClient(null);
+  const handleSuspendClick = async (client: Client) => {
+    if (confirm("Are you sure you want to suspend this client?")) {
+      await onSuspendClient(client.id);
     }
   };
 
-  const handleReinstate = async (clientId: string) => {
+  const handleReinstateClick = async (clientId: string) => {
     if (confirm("Are you sure you want to reinstate this client?")) {
       await onReinstateClient(clientId);
     }
@@ -119,119 +111,125 @@ export default function ClientsTable({
   }
 
   return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50/80 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Profile
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Client Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Phone Number
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date of Registration
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date Approved
-              </th>
-              
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {clients.map((client) => (
-              <>
-                <tr
-                key={client._id}
-                  className={`
-                    hover:bg-gray-50/50 transition-colors cursor-pointer
-                    ${client.is_approved ? "bg-green-50/30" : "bg-red-50/30"}
-                  `}
-                  onClick={() => toggleRowExpansion(client._id)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="relative w-14 h-14">
-                      <Image
-                        src={
-                          client.avatar_url ||
-                          "/assets/images/users/default-avatar.jpg"
-                        }
-                        alt={client.name}
-                        fill
-                        className="rounded-lg object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src =
-                            "/assets/images/users/default-avatar.jpg";
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50/80 border-b border-gray-200">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Profile
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Client Name
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Phone Number
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Date of Registration
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {clients.map((client) => (
+            <>
+              <tr
+                key={client.id}
+                className={`
+                  hover:bg-gray-50/50 transition-colors cursor-pointer
+                  ${client.is_approved ? "bg-green-50/30" : "bg-red-50/30"}
+                `}
+                onClick={() => toggleRowExpansion(client.id)}
+              >
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="relative w-14 h-14">
+                    <Image
+                      src={client.profile_picture }
+                      alt={client.name}
+                      fill
+                      className="rounded-lg object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/assets/images/users/default-avatar.jpg";
+                      }}
+                    />
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {client.name}
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                    <span className="text-sm text-gray-600 ml-1">
+                      {client.client_average_rating?.toFixed(1) || "0.0"}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{client.phone}</div>
+                  <div className="text-xs text-gray-500 flex items-center mt-1">
+                    <Phone className="w-3 h-3 mr-1" />
+                    {client.isPhone_number_verified ? "Verified" : "Unverified"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {formatDate(client.joined_date)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {getStatusBadge(client)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex flex-col space-y-2 min-w-[120px]">
+                    {client.is_approved ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSuspendClick(client);
                         }}
-                      />
-                    </div>
+                        className="inline-flex items-center justify-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <XCircle className="w-3 h-3 mr-1" />
+                        Suspend
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReinstateClick(client.id);
+                        }}
+                        className="inline-flex items-center justify-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Reinstate
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+
+              {/* Expanded Details Row */}
+              {expandedRow === client.id && (
+                <tr className="bg-gray-50/50">
+                  <td colSpan={6} className="px-6 py-4">
+                    <ClientDetails
+                      client={client}
+                      onSendMessage={onSendMessage}
+                    />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {client.name}
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      <span className="text-sm text-gray-600 ml-1">
-                        {client.client_average_rating?.toFixed(1) || "0.0"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.phone}</div>
-                    <div className="text-xs text-gray-500 flex items-center mt-1">
-                      <Phone className="w-3 h-3 mr-1" />
-                      {client.isPhone_number_verified
-                        ? "Verified"
-                        : "Unverified"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatDate(client.joined_date)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {getDateApproved(client)}
-                    </div>
-                  </td>
-                 
-                  
                 </tr>
-
-                {/* Expanded Details Row */}
-                {expandedRow === client._id && (
-                  <tr className="bg-gray-50/50">
-                    <td colSpan={7} className="px-6 py-4">
-                      <ClientDetails
-                        client={client}
-                        onSendMessage={onSendMessage}
-                      />
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Suspend Modal */}
-      <SuspendModal
-        isOpen={showSuspendModal}
-        onClose={() => {
-          setShowSuspendModal(false);
-          setSelectedClient(null);
-        }}
-        onConfirm={handleSuspendConfirm}
-        clientName={selectedClient?.name || ""}
-      />
-    </>
+              )}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

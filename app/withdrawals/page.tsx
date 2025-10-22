@@ -12,6 +12,7 @@ import {
   CheckSquare,
   TrendingUp,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface WithdrawalRequest {
   _id: string;
@@ -30,9 +31,19 @@ interface WithdrawalRequest {
   };
 }
 
+interface StatsData {
+  totalWithdrawals: number;
+  totalDeposits: number;
+  totalCancelled: number;
+  totalCompleted: number;
+  netProfit: number;
+}
+
 export default function AdminWithdrawalsPage() {
+  const { token } = useAuth();
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [alert, setAlert] = useState<{
@@ -42,18 +53,71 @@ export default function AdminWithdrawalsPage() {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "pending" | "processed"
   >("all");
-
-  // Dummy data for the cards
-  const [stats, setStats] = useState({
-    successfulPayments: 1247,
-    cancelledPayments: 89,
-    completedPayments: 1158,
-    netProfit: 284500,
+  const [stats, setStats] = useState<StatsData>({
+    totalWithdrawals: 0,
+    totalDeposits: 0,
+    totalCancelled: 0,
+    totalCompleted: 0,
+    netProfit: 0,
   });
 
   useEffect(() => {
     fetchWithdrawals();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      
+      const endpoints = [
+        "https://tasksfy.com/v1/web/superAdmin/transactions/total/withdrawal/stats",
+        "https://tasksfy.com/v1/web/superAdmin/transactions/total/deposit/stats",
+        "https://tasksfy.com/v1/web/superAdmin/transactions/total/canceled/stats",
+        "https://tasksfy.com/v1/web/superAdmin/transactions/total/completed/stats",
+        "https://tasksfy.com/v1/web/superAdmin/transactions/total/net/profit/stats"
+      ];
+
+      const [withdrawalsRes, depositsRes, cancelledRes, completedRes, netProfitRes] = await Promise.all(
+        endpoints.map(endpoint =>
+          fetch(endpoint, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        )
+      );
+
+      // Parse all responses
+      const withdrawalsData = await withdrawalsRes.json();
+      const depositsData = await depositsRes.json();
+      const cancelledData = await cancelledRes.json();
+      const completedData = await completedRes.json();
+      const netProfitData = await netProfitRes.json();
+
+      console.log("Stats API Responses:", {
+        withdrawals: withdrawalsData,
+        deposits: depositsData,
+        cancelled: cancelledData,
+        completed: completedData,
+        netProfit: netProfitData
+      });
+
+      setStats({
+        totalWithdrawals: withdrawalsData || 0,
+        totalDeposits: depositsData || 0,
+        totalCancelled: cancelledData || 0,
+        totalCompleted: completedData || 0,
+        netProfit: netProfitData || 0,
+      });
+
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      showAlert("error", "Failed to load statistics");
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const fetchWithdrawals = async () => {
     try {
@@ -114,6 +178,8 @@ export default function AdminWithdrawalsPage() {
           )
         );
         showAlert("success", "Withdrawal approved successfully");
+        // Refresh stats after approval
+        await fetchStats();
       } else {
         showAlert("error", data.message);
       }
@@ -149,6 +215,8 @@ export default function AdminWithdrawalsPage() {
         // Remove from local state or update status
         setWithdrawals((prev) => prev.filter((w) => w._id !== withdrawalId));
         showAlert("success", "Withdrawal rejected successfully");
+        // Refresh stats after rejection
+        await fetchStats();
       } else {
         showAlert("error", data.message);
       }
@@ -203,24 +271,53 @@ export default function AdminWithdrawalsPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Successful Payments Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {/* Total Withdrawals Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                Successful Payments
+                Total Withdrawals
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stats.successfulPayments.toLocaleString()}
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                ) : (
+                  stats.totalWithdrawals.toLocaleString()
+                )}
+              </p>
+              <p className="text-xs text-blue-600 mt-1 flex items-center">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                All time withdrawals
+              </p>
+            </div>
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <CreditCard className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Deposits Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">
+                Total Deposits
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                ) : (
+                  stats.totalDeposits.toLocaleString()
+                )}
               </p>
               <p className="text-xs text-green-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +12% from last month
+                All time deposits
               </p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+              <CheckSquare className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -233,11 +330,15 @@ export default function AdminWithdrawalsPage() {
                 Cancelled Payments
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stats.cancelledPayments.toLocaleString()}
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+                ) : (
+                  stats.totalCancelled.toLocaleString()
+                )}
               </p>
               <p className="text-xs text-red-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +3% from last month
+                All time cancelled
               </p>
             </div>
             <div className="p-3 bg-red-50 rounded-lg">
@@ -254,15 +355,19 @@ export default function AdminWithdrawalsPage() {
                 Completed Payments
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                {stats.completedPayments.toLocaleString()}
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                ) : (
+                  stats.totalCompleted.toLocaleString()
+                )}
               </p>
-              <p className="text-xs text-blue-600 mt-1 flex items-center">
+              <p className="text-xs text-purple-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +8% from last month
+                All time completed
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <CheckSquare className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -273,15 +378,19 @@ export default function AdminWithdrawalsPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Net Profit</p>
               <p className="text-2xl font-bold text-gray-900 mt-2">
-                KES {stats.netProfit.toLocaleString()}
+                {statsLoading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+                ) : (
+                  `KES ${stats.netProfit.toLocaleString()}`
+                )}
               </p>
-              <p className="text-xs text-purple-600 mt-1 flex items-center">
+              <p className="text-xs text-orange-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                +15% from last month
+                Current net profit
               </p>
             </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <CreditCard className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-orange-50 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>
