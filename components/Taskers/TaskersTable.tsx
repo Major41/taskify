@@ -1,4 +1,3 @@
-// components/Taskers/TaskersTable.tsx
 "use client";
 
 import { useState } from "react";
@@ -21,7 +20,7 @@ import SuspendModal from "./SuspendModal";
 
 interface TaskersTableProps {
   taskers: Tasker[];
-  onSuspendTasker: (taskerId: string) => void; 
+  onSuspendTasker: (taskerId: string, reason: string) => void; // Updated to include reason
   onReinstateTasker: (taskerId: string) => void;
   onSendMessage: (taskerId: string, message: string) => Promise<boolean>;
 }
@@ -80,26 +79,25 @@ export default function TaskersTable({
     }
   };
 
-const getDateApproved = (tasker: Tasker) => {
-  if (tasker.is_approved) {
-    // If we have an updatedAt date, use it, otherwise use joined_date or show generic text
-    return tasker.updatedAt ? formatDate(tasker.updatedAt) : 
-           tasker.joined_date ? formatDate(tasker.joined_date) : "Approved";
-  }
-  return "Not Approved";
-};
-
-  const handleSuspendClick = async (taskerId: string) => {
-    if (confirm("Are you sure you want to suspend this tasker?")) {
-      await onSuspendTasker(taskerId);
+  const getDateApproved = (tasker: Tasker) => {
+    if (tasker.is_approved) {
+      return tasker.updatedAt
+        ? formatDate(tasker.updatedAt)
+        : tasker.joined_date
+        ? formatDate(tasker.joined_date)
+        : "Approved";
     }
+    return "Not Approved";
   };
 
-  const handleSuspendConfirm = async () => {
-    // Removed reason parameter
+  const handleSuspendClick = (tasker: Tasker) => {
+    setSelectedTasker(tasker);
+    setShowSuspendModal(true);
+  };
+
+  const handleSuspendConfirm = async (reason: string) => {
     if (selectedTasker) {
-      // console.log("Suspending tasker with ID:", selectedTasker);
-      await onSuspendTasker(selectedTasker.id); // Only pass tasker ID
+      await onSuspendTasker(selectedTasker.id, reason);
       setShowSuspendModal(false);
       setSelectedTasker(null);
     }
@@ -161,11 +159,7 @@ const getDateApproved = (tasker: Tasker) => {
                   key={tasker.id}
                   className={`
                     hover:bg-gray-50/50 transition-colors cursor-pointer
-                    ${
-                      tasker.is_approved
-                        ? "bg-green-50/30"
-                        : "bg-red-50/30"
-                    }
+                    ${tasker.is_approved ? "bg-green-50/30" : "bg-red-50/30"}
                   `}
                   onClick={() => toggleRowExpansion(tasker.id)}
                 >
@@ -222,11 +216,11 @@ const getDateApproved = (tasker: Tasker) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex flex-col space-y-2 min-w-[120px]">
-                      {tasker.is_approved  ? (
+                      {tasker.is_approved ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSuspendClick(tasker.id);
+                            handleSuspendClick(tasker);
                           }}
                           className="inline-flex items-center justify-center px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 transition-colors"
                         >
@@ -266,14 +260,14 @@ const getDateApproved = (tasker: Tasker) => {
         </table>
       </div>
 
-      {/* Suspend Modal - Updated to not require reason */}
+      {/* Suspend Modal - Now requires reason */}
       <SuspendModal
         isOpen={showSuspendModal}
         onClose={() => {
           setShowSuspendModal(false);
           setSelectedTasker(null);
         }}
-        onConfirm={handleSuspendConfirm} // No reason parameter needed
+        onConfirm={handleSuspendConfirm} // Now expects reason parameter
         taskerName={selectedTasker?.name || ""}
       />
     </>

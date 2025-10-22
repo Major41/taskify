@@ -110,10 +110,8 @@ export default function TaskersPage() {
     try {
       // Calculate stats from the taskers data
       const totalTaskers = taskers.length;
-      const activeTaskers = taskers.filter(
-        (t) => t.is_approved).length;
-      const suspendedTaskers = taskers.filter(
-        (t) => !t.is_approved).length;
+      const activeTaskers = taskers.filter((t) => t.is_approved).length;
+      const suspendedTaskers = taskers.filter((t) => !t.is_approved).length;
       const totalCompletedTasks = taskers.reduce(
         (sum, tasker) => sum + (tasker.completed_tasks || 0),
         0
@@ -181,10 +179,12 @@ export default function TaskersPage() {
   };
 
   // In your page.tsx - update the handleSuspendTasker function
-  const handleSuspendTasker = async (taskerId: string) => {
+  const handleSuspendTasker = async (taskerId: string, reason: string) => {
     try {
       const response = await fetch(
-        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${taskerId}&is_approved=false`,
+        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${taskerId}&is_approved=false&reason=${encodeURIComponent(
+          reason
+        )}`,
         {
           method: "POST",
           headers: {

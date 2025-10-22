@@ -11,8 +11,13 @@ import {
   X,
   CheckSquare,
   TrendingUp,
+  Calendar,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 interface WithdrawalRequest {
   _id: string;
@@ -61,25 +66,139 @@ export default function AdminWithdrawalsPage() {
     netProfit: 0,
   });
 
+  // Date range state with individual date controls
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+
+  // Individual date components for manual selection
+  const [manualStartDate, setManualStartDate] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    day: new Date().getDate(),
+  });
+
+  const [manualEndDate, setManualEndDate] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1,
+    day: new Date().getDate(),
+  });
+
+  const [selectionMode, setSelectionMode] = useState<"calendar" | "manual">(
+    "calendar"
+  );
+
   useEffect(() => {
     fetchWithdrawals();
     fetchStats();
   }, []);
 
+  // Generate years (last 10 years + next 2 years)
+  const generateYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear - 10; i <= currentYear + 2; i++) {
+      years.push(i);
+    }
+    return years;
+  };
+
+  // Generate months
+  const generateMonths = () => {
+    return [
+      { value: 1, label: "January" },
+      { value: 2, label: "February" },
+      { value: 3, label: "March" },
+      { value: 4, label: "April" },
+      { value: 5, label: "May" },
+      { value: 6, label: "June" },
+      { value: 7, label: "July" },
+      { value: 8, label: "August" },
+      { value: 9, label: "September" },
+      { value: 10, label: "October" },
+      { value: 11, label: "November" },
+      { value: 12, label: "December" },
+    ];
+  };
+
+  // Generate days based on month and year
+  const generateDays = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const days = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
+  };
+
+  // Convert manual date to Date object
+  const manualDateToDate = (manualDate: {
+    year: number;
+    month: number;
+    day: number;
+  }) => {
+    return new Date(manualDate.year, manualDate.month - 1, manualDate.day);
+  };
+
+  // Apply manual date selection
+  const applyManualDates = () => {
+    const newStartDate = manualDateToDate(manualStartDate);
+    const newEndDate = manualDateToDate(manualEndDate);
+
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+  };
+
+  // Convert Date to Unix timestamp in milliseconds
+  const dateToUnixMillis = (date: Date | null): number => {
+    if (!date) return 0;
+    return date.getTime();
+  };
+
+  // Get query parameters for date range
+  const getDateQueryParams = (): string => {
+    const params = new URLSearchParams();
+
+    if (startDate) {
+      params.append("from", dateToUnixMillis(startDate).toString());
+    }
+
+    if (endDate) {
+      params.append("to", dateToUnixMillis(endDate).toString());
+    }
+
+    return params.toString();
+  };
+
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      
-      const endpoints = [
-        "https://tasksfy.com/v1/web/superAdmin/transactions/total/withdrawal/stats",
-        "https://tasksfy.com/v1/web/superAdmin/transactions/total/deposit/stats",
-        "https://tasksfy.com/v1/web/superAdmin/transactions/total/canceled/stats",
-        "https://tasksfy.com/v1/web/superAdmin/transactions/total/completed/stats",
-        "https://tasksfy.com/v1/web/superAdmin/transactions/total/net/profit/stats"
+
+      const baseEndpoints = [
+        "total/withdrawal/stats",
+        "total/deposit/stats",
+        "total/canceled/stats",
+        "total/completed/stats",
+        "total/net/profit/stats",
       ];
 
-      const [withdrawalsRes, depositsRes, cancelledRes, completedRes, netProfitRes] = await Promise.all(
-        endpoints.map(endpoint =>
+      const dateParams = getDateQueryParams();
+
+      const endpoints = baseEndpoints.map(
+        (endpoint) =>
+          `https://tasksfy.com/v1/web/superAdmin/transactions/${endpoint}${
+            dateParams ? `?${dateParams}` : ""
+          }`
+      );
+
+      const [
+        withdrawalsRes,
+        depositsRes,
+        cancelledRes,
+        completedRes,
+        netProfitRes,
+      ] = await Promise.all(
+        endpoints.map((endpoint) =>
           fetch(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -95,14 +214,6 @@ export default function AdminWithdrawalsPage() {
       const completedData = await completedRes.json();
       const netProfitData = await netProfitRes.json();
 
-      console.log("Stats API Responses:", {
-        withdrawals: withdrawalsData,
-        deposits: depositsData,
-        cancelled: cancelledData,
-        completed: completedData,
-        netProfit: netProfitData
-      });
-
       setStats({
         totalWithdrawals: withdrawalsData || 0,
         totalDeposits: depositsData || 0,
@@ -110,7 +221,6 @@ export default function AdminWithdrawalsPage() {
         totalCompleted: completedData || 0,
         netProfit: netProfitData || 0,
       });
-
     } catch (error) {
       console.error("Error fetching stats:", error);
       showAlert("error", "Failed to load statistics");
@@ -143,6 +253,40 @@ export default function AdminWithdrawalsPage() {
     setTimeout(() => setAlert(null), 5000);
   };
 
+  const handleApplyDateFilter = () => {
+    if (startDate && endDate && startDate > endDate) {
+      showAlert("error", "Start date cannot be after end date");
+      return;
+    }
+    fetchStats();
+    setShowDateFilter(false);
+  };
+
+ const handleClearDateFilter = () => {
+   setStartDate(null);
+   setEndDate(null);
+
+   // Also reset the manual dates to current date
+   const currentDate = new Date();
+   setManualStartDate({
+     year: currentDate.getFullYear(),
+     month: currentDate.getMonth() + 1,
+     day: currentDate.getDate(),
+   });
+   setManualEndDate({
+     year: currentDate.getFullYear(),
+     month: currentDate.getMonth() + 1,
+     day: currentDate.getDate(),
+   });
+
+   // Close the filter panel
+   setShowDateFilter(false);
+
+   // Force refetch stats without any date filters
+   fetchStats();
+ };
+
+  // Rest of your existing functions (handleApprove, handleReject, etc.) remain the same
   const handleApprove = async (withdrawalId: string) => {
     if (!confirm("Are you sure you want to approve this withdrawal request?")) {
       return;
@@ -164,7 +308,6 @@ export default function AdminWithdrawalsPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Update the local state
         setWithdrawals((prev) =>
           prev.map((w) =>
             w._id === withdrawalId
@@ -178,7 +321,6 @@ export default function AdminWithdrawalsPage() {
           )
         );
         showAlert("success", "Withdrawal approved successfully");
-        // Refresh stats after approval
         await fetchStats();
       } else {
         showAlert("error", data.message);
@@ -212,10 +354,8 @@ export default function AdminWithdrawalsPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Remove from local state or update status
         setWithdrawals((prev) => prev.filter((w) => w._id !== withdrawalId));
         showAlert("success", "Withdrawal rejected successfully");
-        // Refresh stats after rejection
         await fetchStats();
       } else {
         showAlert("error", data.message);
@@ -241,6 +381,8 @@ export default function AdminWithdrawalsPage() {
   const pendingCount = withdrawals.filter((w) => !w.isPaymentApproved).length;
   const processedCount = withdrawals.filter((w) => w.isPaymentApproved).length;
   const allCount = withdrawals.length;
+
+  const hasActiveDateFilter = startDate || endDate;
 
   if (loading) {
     return (
@@ -270,6 +412,316 @@ export default function AdminWithdrawalsPage() {
         </div>
       )}
 
+      {/* Enhanced Date Filter Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              Statistics Date Range
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {hasActiveDateFilter
+                ? `Showing data from ${
+                    startDate ? startDate.toLocaleDateString() : "beginning"
+                  } to ${endDate ? endDate.toLocaleDateString() : "now"}`
+                : "Showing all-time statistics"}
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {hasActiveDateFilter && (
+              <button
+                onClick={handleClearDateFilter}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Clear Filter
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowDateFilter(!showDateFilter)}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
+              {hasActiveDateFilter ? "Change Dates" : "Filter by Date"}
+            </button>
+          </div>
+        </div>
+
+        {/* Enhanced Date Picker Form */}
+        {showDateFilter && (
+          <div className="mt-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {/* Selection Mode Toggle */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setSelectionMode("calendar")}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  selectionMode === "calendar"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Calendar Picker
+              </button>
+              <button
+                onClick={() => setSelectionMode("manual")}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                  selectionMode === "manual"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                Manual Selection
+              </button>
+            </div>
+
+            {selectionMode === "calendar" ? (
+              /* Calendar Picker */
+              <div className="max-w-md mx-auto">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Date Range (Calendar)
+                  </label>
+                  <DatePicker
+                    selectsRange={true}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onChange={(update) => {
+                      const [start, end] = update;
+                      setStartDate(start);
+                      setEndDate(end);
+                    }}
+                    isClearable={true}
+                    placeholderText="Click to select a date range"
+                    monthsShown={2}
+                    showPopperArrow={false}
+                    className="w-full px-4 Select Date text-black py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    calendarClassName="shadow-lg border border-gray-200 rounded-lg"
+                    dayClassName={(date) =>
+                      date.getDate() === new Date().getDate() &&
+                      date.getMonth() === new Date().getMonth() &&
+                      date.getFullYear() === new Date().getFullYear()
+                        ? "bg-blue-100 text-blue-600 rounded-full"
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Manual Date Selection */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Start Date Selection */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Start Date
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Year
+                      </label>
+                      <select
+                        value={manualStartDate.year}
+                        onChange={(e) =>
+                          setManualStartDate((prev) => ({
+                            ...prev,
+                            year: parseInt(e.target.value),
+                            day: 1, // Reset day when year changes
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateYears().map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Month
+                      </label>
+                      <select
+                        value={manualStartDate.month}
+                        onChange={(e) =>
+                          setManualStartDate((prev) => ({
+                            ...prev,
+                            month: parseInt(e.target.value),
+                            day: 1, // Reset day when month changes
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateMonths().map((month) => (
+                          <option key={month.value} value={month.value}>
+                            {month.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Day
+                      </label>
+                      <select
+                        value={manualStartDate.day}
+                        onChange={(e) =>
+                          setManualStartDate((prev) => ({
+                            ...prev,
+                            day: parseInt(e.target.value),
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateDays(
+                          manualStartDate.year,
+                          manualStartDate.month
+                        ).map((day) => (
+                          <option key={day} value={day}>
+                            {day}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="text-xs text-black">
+                    Selected:{" "}
+                    {manualDateToDate(manualStartDate).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {/* End Date Selection */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    End Date
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Year
+                      </label>
+                      <select
+                        value={manualEndDate.year}
+                        onChange={(e) =>
+                          setManualEndDate((prev) => ({
+                            ...prev,
+                            year: parseInt(e.target.value),
+                            day: 1,
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateYears().map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Month
+                      </label>
+                      <select
+                        value={manualEndDate.month}
+                        onChange={(e) =>
+                          setManualEndDate((prev) => ({
+                            ...prev,
+                            month: parseInt(e.target.value),
+                            day: 1,
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateMonths().map((month) => (
+                          <option key={month.value} value={month.value}>
+                            {month.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Day
+                      </label>
+                      <select
+                        value={manualEndDate.day}
+                        onChange={(e) =>
+                          setManualEndDate((prev) => ({
+                            ...prev,
+                            day: parseInt(e.target.value),
+                          }))
+                        }
+                        className="w-full text-black px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {generateDays(
+                          manualEndDate.year,
+                          manualEndDate.month
+                        ).map((day) => (
+                          <option key={day} value={day}>
+                            {day}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Selected:{" "}
+                    {manualDateToDate(manualEndDate).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {/* Apply Manual Dates Button */}
+                <div className="md:col-span-2">
+                  <button
+                    onClick={applyManualDates}
+                    className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Apply Manual Dates
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Selected Dates Preview */}
+            {(startDate || endDate) && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium">
+                  Selected Range:
+                </p>
+                <p className="text-sm text-blue-600">
+                  {startDate ? startDate.toLocaleDateString() : "Start date"}
+                  {" → "}
+                  {endDate ? endDate.toLocaleDateString() : "End date"}
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowDateFilter(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyDateFilter}
+                disabled={!startDate && !endDate}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Apply Filter
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {/* Total Withdrawals Card */}
@@ -288,7 +740,7 @@ export default function AdminWithdrawalsPage() {
               </p>
               <p className="text-xs text-blue-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                All time withdrawals
+                {hasActiveDateFilter ? "Selected period" : "All time"}
               </p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
@@ -313,7 +765,7 @@ export default function AdminWithdrawalsPage() {
               </p>
               <p className="text-xs text-green-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                All time deposits
+                {hasActiveDateFilter ? "Selected period" : "All time"}
               </p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg">
@@ -338,7 +790,7 @@ export default function AdminWithdrawalsPage() {
               </p>
               <p className="text-xs text-red-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                All time cancelled
+                {hasActiveDateFilter ? "Selected period" : "All time"}
               </p>
             </div>
             <div className="p-3 bg-red-50 rounded-lg">
@@ -363,7 +815,7 @@ export default function AdminWithdrawalsPage() {
               </p>
               <p className="text-xs text-purple-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                All time completed
+                {hasActiveDateFilter ? "Selected period" : "All time"}
               </p>
             </div>
             <div className="p-3 bg-purple-50 rounded-lg">
@@ -386,7 +838,7 @@ export default function AdminWithdrawalsPage() {
               </p>
               <p className="text-xs text-orange-600 mt-1 flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
-                Current net profit
+                {hasActiveDateFilter ? "Selected period" : "Current"}
               </p>
             </div>
             <div className="p-3 bg-orange-50 rounded-lg">

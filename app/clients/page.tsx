@@ -168,13 +168,15 @@ export default function ClientsPage() {
     setFilteredClients(filtered);
   };
 
-  // In your app/clients/page.tsx - update the handleSuspendClient function
-  const handleSuspendClient = async (clientId: string) => {
+  // Update the handleSuspendClient function
+  const handleSuspendClient = async (clientId: string, reason: string) => {
     try {
-      console.log("Suspending client with ID:", clientId);
+      console.log("Suspending client with ID:", clientId, "Reason:", reason);
 
       const response = await fetch(
-        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${clientId}&is_approved=false`,
+        `https://tasksfy.com/v1/web/admin/client/approval?user_id=${clientId}&is_client_approved=false&reason=${encodeURIComponent(
+          reason
+        )}`,
         {
           method: "POST",
           headers: {
@@ -221,13 +223,13 @@ export default function ClientsPage() {
     }
   };
 
-  // Also update the handleReinstateClient function similarly
+  // Update the handleReinstateClient function (no reason needed for reinstatement)
   const handleReinstateClient = async (clientId: string) => {
     try {
       console.log("Reinstating client with ID:", clientId);
 
       const response = await fetch(
-        `https://tasksfy.com/v1/web/admin/tasker/approval?tasker_id=${clientId}&is_approved=true`,
+        `https://tasksfy.com/v1/web/admin/client/approval?user_id=${clientId}&is_client_approved=true`,
         {
           method: "POST",
           headers: {

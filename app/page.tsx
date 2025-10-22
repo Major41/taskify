@@ -132,13 +132,13 @@ const handleLogin = async (e: React.FormEvent) => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Sidebar Section */}
-      <aside className="flex-1 bg-gradient-to-br from-green-600 to-green-700 text-white flex items-center justify-center p-8">
+      <aside className="flex-1 bg-[#05A243] text-white flex items-center justify-center p-8">
         <div className="text-center max-w-md">
           <div className="flex justify-center mb-6">
             <Image
               src="/logo.jpeg"
               alt="TasksFy Logo"
-              className="rounded-xl shadow-2xl"
+              className=""
               width={80}
               height={80}
               priority

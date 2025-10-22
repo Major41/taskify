@@ -104,11 +104,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Image
                   src="/logo.jpeg"
                   alt="Tasksfy Logo"
-                  width={44}
-                  height={44}
-                  className="rounded-xl shadow-lg shadow-green-500/20 border-2 border-white"
+                  width={50}
+                  height={50}
+                  className=""
                 />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                {/* <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div> */}
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white bg-clip-text">
