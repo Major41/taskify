@@ -73,7 +73,7 @@ export default function ClientsPage() {
           is_approved: user.user.isClientApproved, // Clients are typically approved by default
           joined_date: user.user.dateOfRegistration,
           total_requests: user.user.total_requests || 0,
-          completed_requests: user.user.completed_requests || 0,
+          client_complete_tasks: user.user.client_complete_tasks,
           is_active: user.user.is_active !== false, // Default to active if not specified
           isPhone_number_verified: user.user.isPhone_number_verified || false,
           reviews: user.client_reviews,

@@ -54,7 +54,7 @@ export default function TaskersPage() {
       }
 
       const data = await response.json();
-      // console.log("Taskers API Response:", data.taskersWithReviewsAndSkills); // Debug log
+      console.log("Taskers API Response:", data.taskersWithReviewsAndSkills); // Debug log
 
       if (data.success && data.taskersWithReviewsAndSkills) {
         // Transform the API response to match our Tasker interface
@@ -70,7 +70,7 @@ export default function TaskersPage() {
             profile_picture: tasker.tasker.user?.profile_url,
             skills: tasker.skills || [],
             rating: tasker.tasker.tasker_average_rating,
-            completed_tasks: tasker.completed_tasks_count,
+            completed_tasks: tasker.tasker.tasker_complete_tasks,
             is_approved: tasker.tasker.is_approved,
             is_accepting_requests: tasker.tasker.is_accepting_requests,
             joined_date: tasker.tasker.tasker_reg_date,
