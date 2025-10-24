@@ -28,12 +28,8 @@ interface Message {
 export default function AdminMessagesPage() {
   const { token } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [generalMessage, setGeneralMessage] = useState(
-    "Hello there, We wish you a merry Christmas and a happy New Year. Tasksfy values you and wishes you a blessed eve."
-  );
-  const [taskersMessage, setTaskersMessage] = useState(
-    "Hello there, We wish you a merry Christmas and a happy New Year. Tasksfy values you and wishes you a blessed eve."
-  );
+  const [generalMessage, setGeneralMessage] = useState("");
+  const [taskersMessage, setTaskersMessage] = useState("");
   const [specificUserMessage, setSpecificUserMessage] = useState("");
   const [specificUserId, setSpecificUserId] = useState("");
   const [sending, setSending] = useState(false);
