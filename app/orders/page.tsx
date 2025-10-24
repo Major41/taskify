@@ -111,6 +111,7 @@ export default function OrdersPage() {
       taskerName: apiRequest.tasker
         ? `${apiRequest.tasker.user.first_name} ${apiRequest.tasker.user.last_name}`
         : "Not Assigned",
+      taskerPhone: apiRequest.tasker.user.phone_number,
       clientName: apiRequest.user
         ? `${apiRequest.user.first_name} ${apiRequest.user.last_name}`
         : "Unknown Client",

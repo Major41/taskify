@@ -23,6 +23,8 @@ export default function DashboardHeader({
     window.location.reload();
   };
 
+  console.log(user)
+
   const currentUser =
     user ||
     JSON.parse(
@@ -37,7 +39,7 @@ export default function DashboardHeader({
         <div className="flex lg:hidden items-center space-x-3">
           <div className="relative">
             <Image
-              src="/izoh.jpg"
+              src={user.avatar_url}
               alt="Profile"
               width={40}
               height={40}
@@ -94,7 +96,7 @@ export default function DashboardHeader({
               </div>
               <div className="relative">
                 <Image
-                  src="/izoh.jpg"
+                  src={user.avatar_url}
                   alt="Profile"
                   width={40}
                   height={40}

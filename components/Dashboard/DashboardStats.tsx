@@ -79,7 +79,7 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
             requestsChartInstance.current = new Chart(requestsChartRef.current, {
               type: "doughnut",
               data: {
-                labels: ["Pending", "Expired", "Declined", "Accepted", "Completed"],
+                labels: ["Pending", "Expired", "Declined", "Accepted"],
                 datasets: [
                   {
                     data: [
@@ -87,9 +87,8 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
                       data.requests.expired,
                       data.requests.declined,
                       data.requests.accepted ?? 0,
-                      data.requests.completed ?? 0,
                     ],
-                    backgroundColor: ["#F59E0B", "#EF4444", "#6B7280", "#10B981", "#3B82F6"],
+                    backgroundColor: ["#F59E0B", "#EF4444", "#6B7280", "#10B981"],
                     borderWidth: 2,
                     borderColor: "#FFFFFF",
                     hoverOffset: 8,
@@ -131,28 +130,22 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
             labels: [
               "Completed",
               "Ongoing",
-              "Pending",
               "In Negotiation",
               "Cancelled",
-              "Declined",
             ],
             datasets: [
               {
                 data: [
                   data.acceptedRequests.completed,
                   data.acceptedRequests.ongoing,
-                  data.acceptedRequests.pending,
                   data.acceptedRequests.inNegotiation,
                   data.acceptedRequests.cancelled,
-                  data.acceptedRequests.declined,
                 ],
                 backgroundColor: [
                   "#10B981", // Completed - Green
                   "#F59E0B", // Ongoing - Amber
-                  "#6B7280", // Pending - Gray
                   "#8B5CF6", // In Negotiation - Purple
                   "#EF4444", // Cancelled - Red
-                  "#374151", // Declined - Dark Gray
                 ],
                 borderWidth: 2,
                 borderColor: "#FFFFFF",
@@ -212,15 +205,6 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
       textColor: "text-yellow-700",
     },
     {
-      title: "Pending Tasks",
-      value: data.acceptedRequests.pending,
-      icon: ClipboardList,
-      color: "bg-blue-500",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      textColor: "text-blue-700",
-    },
-    {
       title: "In Negotiation",
       value: data.acceptedRequests.inNegotiation,
       icon: Handshake,
@@ -237,15 +221,6 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
       bgColor: "bg-red-50",
       iconColor: "text-red-600",
       textColor: "text-red-700",
-    },
-    {
-      title: "Declined Tasks",
-      value: data.acceptedRequests.declined,
-      icon: ThumbsDown,
-      color: "bg-gray-500",
-      bgColor: "bg-gray-50",
-      iconColor: "text-gray-600",
-      textColor: "text-gray-700",
     },
   ];
 
@@ -287,26 +262,15 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
       iconColor: "text-green-600",
       textColor: "text-gray-700",
     },
-    {
-      title: "Completed Requests",
-      value: data.requests.completed ?? 0,
-      icon: ThumbsUp,
-      color: "bg-green-500",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      textColor: "text-gray-700",
-    },
   ];
 
   const totalRequests =
-    data.requests.pending + data.requests.expired + data.requests.declined + (data.requests.accepted ?? 0) + (data.requests.completed ?? 0);
+    data.requests.pending + data.requests.expired + data.requests.declined + (data.requests.accepted ?? 0);
   const totalAcceptedRequests =
     data.acceptedRequests.completed +
     data.acceptedRequests.ongoing +
-    data.acceptedRequests.pending +
     data.acceptedRequests.inNegotiation +
-    data.acceptedRequests.cancelled +
-    data.acceptedRequests.declined;
+    data.acceptedRequests.cancelled;
 
   const Card = ({ stat }: { stat: (typeof acceptedRequestsCards)[0] }) => {
     const IconComponent = stat.icon;
@@ -356,7 +320,7 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
           {acceptedRequestsCards.map((stat, index) => (
             <Card key={`accepted-${index}`} stat={stat} />
           ))}
@@ -376,7 +340,7 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {requestsCards.map((stat, index) => (
             <Card key={`request-${index}`} stat={stat} />
           ))}
