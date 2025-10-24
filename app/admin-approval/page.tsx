@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Shield,
   ShieldCheck,
   ShieldOff,
-  Users,
   Search,
   Loader2,
   AlertCircle,
   CheckCircle,
   User,
   Crown,
+  Phone,
 } from "lucide-react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,71 +30,120 @@ interface User {
   isPhone_number_verified?: boolean;
 }
 
+// Interface for the API response
+interface ApiUserResponse {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  email: string;
+  profile_url: string;
+  role: "user" | "ADMIN" | "SUPER ADMIN";
+  isPhone_number_verified: boolean;
+  isTasker: boolean;
+  dateOfRegistration: number;
+  // Add other fields as needed
+}
+
 export default function AdminApprovalPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, token } = useAuth();
   const { loading: authLoading } = useProtectedRoute("SUPER ADMIN");
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<
-    "all" | "USER" | "ADMIN" | "SUPER ADMIN"
-  >("all");
-  const [loading, setLoading] = useState(true);
+  const [searchedUser, setSearchedUser] = useState<User | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [alert, setAlert] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchUsers();
+  // Function to map API response to frontend User interface
+  const mapApiUserToFrontendUser = (apiUser: ApiUserResponse): User => {
+    return {
+      _id: apiUser.user_id,
+      name: `${apiUser.first_name} ${apiUser.last_name}`.trim(),
+      first_name: apiUser.first_name,
+      last_name: apiUser.last_name,
+      email: apiUser.email,
+      avatar_url: apiUser.profile_url || undefined,
+      phone_number: apiUser.phone_number,
+      isTasker: apiUser.isTasker,
+      role: apiUser.role,
+      isPhone_number_verified: apiUser.isPhone_number_verified,
+      createdAt: new Date(apiUser.dateOfRegistration).toISOString(),
+    };
+  };
+
+  const searchUserByPhone = async () => {
+    if (!phoneNumber.trim()) {
+      showAlert("error", "Please enter a phone number");
+      return;
     }
-  }, [currentUser]);
 
-  useEffect(() => {
-    filterUsers();
-  }, [users, searchQuery, roleFilter]);
-
-  const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/users/roles");
-      const data = await response.json();
+      setSearchedUser(null);
 
-      if (data.success) {
-        setUsers(data.data);
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
+
+      // Format phone number - ensure it starts with +
+      let formattedPhone = phoneNumber.trim();
+      if (!formattedPhone.startsWith("+")) {
+        formattedPhone = "+" + formattedPhone;
+      }
+
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/super/admin/user/by/phoneNumber?phone_number=${encodeURIComponent(
+          formattedPhone
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("API Response:", response);
+
+      // Handle response - first get as text to avoid JSON parsing errors
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        showAlert("error", "Invalid response from server");
+        setSearchedUser(null);
+        return;
+      }
+
+      console.log("Parsed data:", data);
+
+      if (response.ok && data.user_id) {
+        // Map the API response to your frontend User interface
+        const mappedUser = mapApiUserToFrontendUser(data);
+        setSearchedUser(mappedUser);
+        showAlert("success", "User found successfully!");
       } else {
-        showAlert("error", data.message || "Failed to fetch users");
+        showAlert("error", data.message || "User not found");
+        setSearchedUser(null);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
-      showAlert("error", "Failed to fetch users");
+      console.error("Error searching user:", error);
+      showAlert("error", "Failed to search user");
+      setSearchedUser(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterUsers = () => {
-    let filtered = users;
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (user) =>
-          user.name.toLowerCase().includes(query) ||
-          user.email.toLowerCase().includes(query) ||
-          user.first_name.toLowerCase().includes(query) ||
-          user.last_name.toLowerCase().includes(query)
-      );
-    }
-
-    if (roleFilter !== "all") {
-      filtered = filtered.filter((user) => user.role === roleFilter);
-    }
-
-    setFilteredUsers(filtered);
   };
 
   const updateUserRole = async (
@@ -123,11 +172,8 @@ export default function AdminApprovalPage() {
       const data = await response.json();
 
       if (data.success) {
-        setUsers((prev) =>
-          prev.map((user) =>
-            user._id === userId ? { ...user, role: newRole } : user
-          )
-        );
+        // Update the searched user's role
+        setSearchedUser((prev) => (prev ? { ...prev, role: newRole } : null));
         showAlert("success", data.message);
       } else {
         showAlert("error", data.message);
@@ -178,7 +224,12 @@ export default function AdminApprovalPage() {
     }
   };
 
-  if (authLoading || loading) {
+  const clearSearch = () => {
+    setPhoneNumber("");
+    setSearchedUser(null);
+  };
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -199,12 +250,12 @@ export default function AdminApprovalPage() {
           </p>
           <div
             className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${getRoleColor(
-              currentUser?.role || "user"
+              currentUser?.role || "USER"
             )}`}
           >
-            {getRoleIcon(currentUser?.role || "user")}
+            {getRoleIcon(currentUser?.role || "USER")}
             <span className="ml-2">
-              Your role: {getRoleBadge(currentUser?.role || "user")}
+              Your role: {getRoleBadge(currentUser?.role || "USER")}
             </span>
           </div>
         </div>
@@ -239,7 +290,7 @@ export default function AdminApprovalPage() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Approval</h1>
         </div>
         <p className="text-gray-600">
-          Manage user roles and permissions. Only SUPER ADMIN can modify roles.
+          Search users by phone number and manage their admin roles.
         </p>
 
         {/* Current User Role Indicator */}
@@ -259,204 +310,289 @@ export default function AdminApprovalPage() {
         )}
       </div>
 
-      {/* Filters */}
+      {/* Search Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users by name or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-black pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+        <div className="flex items-center space-x-2 mb-4">
+          <Phone className="h-5 w-5 text-gray-700" />
+          <h2 className="text-lg font-semibold text-gray-900">
+            Search User by Phone Number
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Enter phone number (e.g., +254702891008)"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    searchUserByPhone();
+                  }
+                }}
+                className="w-full text-black pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            
           </div>
 
-          {/* Role Filter */}
-          <div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <div className="flex space-x-2">
+            <button
+              onClick={searchUserByPhone}
+              disabled={!phoneNumber.trim() || loading}
+              className="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <option value="all">All Roles</option>
-              <option value="USER">Users</option>
-              <option value="ADMIN">Admins</option>
-              <option value="SUPER ADMIN">Super Admins</option>
-            </select>
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Search className="h-4 w-4 mr-2" />
+              )}
+              {loading ? "Searching..." : "Search"}
+            </button>
+
+            {(searchedUser || phoneNumber) && (
+              <button
+                onClick={clearSearch}
+                className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+      {/* User Details Section */}
+      {searchedUser && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
-              Users ({filteredUsers.length})
+              User Details
             </h2>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Users className="h-4 w-4" />
-              <span>Total: {users.length}</span>
-            </div>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Current Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr
-                  key={user._id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        {user.avatar_url ? (
-                          <img
-                            className="h-10 w-10 rounded-full"
-                            src={user.avatar_url}
-                            alt={user.name}
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <User className="h-5 w-5 text-gray-600" />
-                          </div>
-                        )}
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* User Information */}
+              <div className="space-y-4">
+                <h3 className="text-md font-medium text-gray-900">
+                  Profile Information
+                </h3>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0 h-16 w-16">
+                    {searchedUser.avatar_url ? (
+                      <img
+                        className="h-16 w-16 rounded-full"
+                        src={searchedUser.avatar_url}
+                        alt={searchedUser.name}
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-gray-300 flex items-center justify-center">
+                        <User className="h-8 w-8 text-gray-600" />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Joined {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {searchedUser.name}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.email}</div>
                     <div className="text-sm text-gray-500">
-                      {user.phone_number || "No phone"}
+                      {searchedUser.first_name} {searchedUser.last_name}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.isTasker
-                          ? "bg-green-100 text-green-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {user.isTasker ? "Tasker" : "Client"}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Email:</span>
+                    <div className="text-gray-900 mt-1">
+                      {searchedUser.email}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Phone:</span>
+                    <div className="text-gray-900 mt-1">
+                      {searchedUser.phone_number}
+                      {searchedUser.isPhone_number_verified && (
+                        <span className="ml-2 text-green-600 text-xs">
+                          ✓ Verified
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="font-medium text-gray-700">
+                        User Type:
+                      </span>
+                      <div className="mt-1">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            searchedUser.isTasker
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {searchedUser.isTasker ? "Tasker" : "Client"}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Joined:</span>
+                      <div className="text-gray-900 mt-1">
+                        {new Date(searchedUser.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Role Management */}
+              <div className="space-y-4">
+                <h3 className="text-md font-medium text-gray-900">
+                  Role Management
+                </h3>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="font-medium text-gray-700">
+                      Current Role:
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(
-                        user.role
+                        searchedUser.role
                       )}`}
                     >
-                      {getRoleIcon(user.role)}
-                      <span className="ml-2">{getRoleBadge(user.role)}</span>
+                      {getRoleIcon(searchedUser.role)}
+                      <span className="ml-2">
+                        {getRoleBadge(searchedUser.role)}
+                      </span>
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {/* FIXED: Show actions for all users except current SUPER ADMIN */}
-                    {currentUser &&
-                      currentUser.role === "SUPER ADMIN" &&
-                      user._id !== currentUser.id && (
-                        <div className="flex space-x-2">
-                          {/* Make Admin - show for users */}
-                          {user.role === "USER" && (
-                            <button
-                              onClick={() => updateUserRole(user._id, "ADMIN")}
-                              disabled={updating === user._id}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updating === user._id ? (
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              ) : (
-                                <ShieldCheck className="h-3 w-3 mr-1" />
-                              )}
-                              Make Admin
-                            </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 mb-3">
+                      Change user role:
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {/* Make Admin - show for users */}
+                      {searchedUser.role === "USER" && (
+                        <button
+                          onClick={() =>
+                            updateUserRole(searchedUser._id, "ADMIN")
+                          }
+                          disabled={updating === searchedUser._id}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {updating === searchedUser._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <ShieldCheck className="h-4 w-4 mr-2" />
                           )}
-
-                         
-
-                          {/* Remove Admin - show for admins */}
-                          {user.role === "ADMIN" && (
-                            <button
-                              onClick={() => updateUserRole(user._id, "USER")}
-                              disabled={updating === user._id}
-                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {updating === user._id ? (
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              ) : (
-                                <ShieldOff className="h-3 w-3 mr-1" />
-                              )}
-                              Remove Admin
-                            </button>
-                          )}
-
-                      
-                         
-                        </div>
+                          Make Admin
+                        </button>
                       )}
 
-                    {/* Show no permissions for non-SUPER ADMIN users or current user */}
-                    {(!currentUser ||
-                      currentUser.role !== "SUPER ADMIN" ||
-                      user._id === currentUser.id) && (
-                      <span className="text-gray-400 text-sm">
-                        {user._id === currentUser?.id
-                          ? "Current user"
-                          : "No permissions"}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      {/* Make Super Admin - show for users and admins */}
+                      {(searchedUser.role === "USER" ||
+                        searchedUser.role === "ADMIN") && (
+                        <button
+                          onClick={() =>
+                            updateUserRole(searchedUser._id, "SUPER ADMIN")
+                          }
+                          disabled={updating === searchedUser._id}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {updating === searchedUser._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Crown className="h-4 w-4 mr-2" />
+                          )}
+                          Make Super Admin
+                        </button>
+                      )}
 
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-12">
-              <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No users found</p>
-              <p className="text-gray-400 text-sm mt-1">
-                {searchQuery || roleFilter !== "all"
-                  ? "Try adjusting your search or filters"
-                  : "No users in the system"}
-              </p>
+                      {/* Remove Admin - show for admins */}
+                      {searchedUser.role === "ADMIN" && (
+                        <button
+                          onClick={() =>
+                            updateUserRole(searchedUser._id, "USER")
+                          }
+                          disabled={updating === searchedUser._id}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {updating === searchedUser._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <ShieldOff className="h-4 w-4 mr-2" />
+                          )}
+                          Remove Admin
+                        </button>
+                      )}
+
+                      {/* Remove Super Admin - show for super admins */}
+                      {searchedUser.role === "SUPER ADMIN" && (
+                        <button
+                          onClick={() =>
+                            updateUserRole(searchedUser._id, "USER")
+                          }
+                          disabled={updating === searchedUser._id}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {updating === searchedUser._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <ShieldOff className="h-4 w-4 mr-2" />
+                          )}
+                          Remove Super Admin
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* No User Found State */}
+      {!searchedUser && phoneNumber && !loading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No user found
+          </h3>
+          <p className="text-gray-500">
+            No user found with the phone number: <strong>{phoneNumber}</strong>
+          </p>
+          <p className="text-gray-400 text-sm mt-2">
+            Please check the phone number and try again.
+          </p>
+        </div>
+      )}
+
+      {/* Initial State */}
+      {!searchedUser && !phoneNumber && !loading && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Search for a user
+          </h3>
+          <p className="text-gray-500">
+            Enter a phone number above to search for a user and manage their
+            admin roles.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

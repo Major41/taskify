@@ -9,8 +9,9 @@ import {
   Loader2,
   MessageCircle,
   Trash2,
+  User,
 } from "lucide-react";
-import{useAuth} from '@/contexts/AuthContext'
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Message {
   _id: string;
@@ -33,7 +34,10 @@ export default function AdminMessagesPage() {
   const [taskersMessage, setTaskersMessage] = useState(
     "Hello there, We wish you a merry Christmas and a happy New Year. Tasksfy values you and wishes you a blessed eve."
   );
+  const [specificUserMessage, setSpecificUserMessage] = useState("");
+  const [specificUserId, setSpecificUserId] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendingToUser, setSendingToUser] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState<{
@@ -49,7 +53,6 @@ export default function AdminMessagesPage() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      
 
       if (!token) {
         showAlert("error", "Authentication token not found");
@@ -88,8 +91,11 @@ export default function AdminMessagesPage() {
         return;
       }
 
+      // Updated route for all users
       const response = await fetch(
-        "https://tasksfy.com/v1/web/superAdmin/topic/users/send",
+        `https://tasksfy.com/v1/web/superAdmin/topic/users/send?message=${encodeURIComponent(
+          generalMessage.trim()
+        )}`,
         {
           method: "POST",
           headers: {
@@ -107,6 +113,8 @@ export default function AdminMessagesPage() {
           }),
         }
       );
+
+      console.log(response);
 
       // Handle response - first get as text to avoid JSON parsing errors
       const responseText = await response.text();
@@ -139,15 +147,17 @@ export default function AdminMessagesPage() {
 
     try {
       setSending(true);
-      const token = getToken();
 
       if (!token) {
         showAlert("error", "Authentication token not found");
         return;
       }
 
+      // Updated route for taskers
       const response = await fetch(
-        "https://tasksfy.com/v1/web/superAdmin/topic/taskers/send",
+        `https://tasksfy.com/v1/web/superAdmin/topic/taskers/send?message=${encodeURIComponent(
+          taskersMessage.trim()
+        )}`,
         {
           method: "POST",
           headers: {
@@ -166,6 +176,7 @@ export default function AdminMessagesPage() {
         }
       );
 
+      console.log(response);
       // Handle response - first get as text to avoid JSON parsing errors
       const responseText = await response.text();
       let data;
@@ -192,6 +203,71 @@ export default function AdminMessagesPage() {
     }
   };
 
+  const handleSpecificUserMessage = async () => {
+    if (!specificUserMessage.trim() || !specificUserId.trim()) {
+      showAlert("error", "Please provide both user ID and message");
+      return;
+    }
+
+    try {
+      setSendingToUser(true);
+
+      if (!token) {
+        showAlert("error", "Authentication token not found");
+        return;
+      }
+
+      // Updated route for specific user
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/admin/message/user/by/id/send?user_id=${specificUserId}&message=${encodeURIComponent(
+          specificUserMessage.trim()
+        )}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            recipientId: specificUserId,
+            requestId: "",
+            title: "Message From Tasksfy Admin",
+            body: specificUserMessage.trim(),
+            type: "",
+            deepLink: "",
+          }),
+        }
+      );
+
+      console.log(response);
+
+      // Handle response - first get as text to avoid JSON parsing errors
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { success: false, message: responseText };
+      }
+
+      if (response.ok) {
+        showAlert("success", "Message sent to user successfully!");
+        setSpecificUserMessage("");
+        setSpecificUserId("");
+        // Refresh messages to show the new message
+        fetchMessages();
+      } else {
+        showAlert("error", data.message || "Failed to send message to user");
+      }
+    } catch (error) {
+      console.error("Error sending message to user:", error);
+      showAlert("error", "Failed to send message to user");
+    } finally {
+      setSendingToUser(false);
+    }
+  };
+
   const handleDeleteMessage = async (messageId: string) => {
     if (!confirm("Are you sure you want to delete this message?")) {
       return;
@@ -199,7 +275,6 @@ export default function AdminMessagesPage() {
 
     try {
       setDeleting(messageId);
-      const token = getToken();
 
       if (!token) {
         showAlert("error", "Authentication token not found");
@@ -262,79 +337,76 @@ export default function AdminMessagesPage() {
         Messages and Updates
       </h1>
 
-      <div className="">
-        {/* Left Column - Broadcast Messages */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* General Message to All Users */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Users className="h-5 w-5 text-gray-700" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Compose a general message to all Users (Clients)
-                </h3>
-              </div>
+      <div className="space-y-6">
+        {/* General Message to All Users */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Users className="h-5 w-5 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Compose a general message to all Users (Clients)
+              </h3>
+            </div>
 
-              <div className="space-y-4">
-                <textarea
-                  className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                  rows={4}
-                  placeholder="Type your message to all users..."
-                  value={generalMessage}
-                  onChange={(e) => setGeneralMessage(e.target.value)}
-                />
+            <div className="space-y-4">
+              <textarea
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={4}
+                placeholder="Type your message to all users..."
+                value={generalMessage}
+                onChange={(e) => setGeneralMessage(e.target.value)}
+              />
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleGeneralBroadcast}
-                    disabled={!generalMessage.trim() || sending}
-                    className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    {sending ? "Sending..." : "Send to All Users"}
-                  </button>
-                </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleGeneralBroadcast}
+                  disabled={!generalMessage.trim() || sending}
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {sending ? "Sending..." : "Send to All Users"}
+                </button>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Message to Taskers */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <Users className="h-5 w-5 text-gray-700" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Compose a message to all Taskers
-                </h3>
-              </div>
+        {/* Message to Taskers */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Users className="h-5 w-5 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Compose a message to all Taskers
+              </h3>
+            </div>
 
-              <div className="space-y-4">
-                <textarea
-                  className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                  rows={4}
-                  placeholder="Type your message to all taskers..."
-                  value={taskersMessage}
-                  onChange={(e) => setTaskersMessage(e.target.value)}
-                />
+            <div className="space-y-4">
+              <textarea
+                className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={4}
+                placeholder="Type your message to all taskers..."
+                value={taskersMessage}
+                onChange={(e) => setTaskersMessage(e.target.value)}
+              />
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleTaskersBroadcast}
-                    disabled={!taskersMessage.trim() || sending}
-                    className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    {sending ? "Sending..." : "Send to All Taskers"}
-                  </button>
-                </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleTaskersBroadcast}
+                  disabled={!taskersMessage.trim() || sending}
+                  className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {sending ? "Sending..." : "Send to All Taskers"}
+                </button>
               </div>
             </div>
           </div>

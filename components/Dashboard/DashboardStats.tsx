@@ -186,14 +186,14 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
 
   // Accepted Requests Cards
   const acceptedRequestsCards = [
-    {
-      title: "Completed Tasks",
-      value: data.acceptedRequests.completed,
-      icon: CheckCircle,
-      color: "bg-green-500",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      textColor: "text-green-700",
+      {
+      title: "In Negotiation",
+      value: data.acceptedRequests.inNegotiation,
+      icon: Handshake,
+      color: "bg-purple-500",
+      bgColor: "bg-purple-50",
+      iconColor: "text-purple-600",
+      textColor: "text-purple-700",
     },
     {
       title: "Ongoing Tasks",
@@ -205,15 +205,6 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
       textColor: "text-yellow-700",
     },
     {
-      title: "In Negotiation",
-      value: data.acceptedRequests.inNegotiation,
-      icon: Handshake,
-      color: "bg-purple-500",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600",
-      textColor: "text-purple-700",
-    },
-    {
       title: "Cancelled Tasks",
       value: data.acceptedRequests.cancelled,
       icon: XCircle,
@@ -222,6 +213,16 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
       iconColor: "text-red-600",
       textColor: "text-red-700",
     },
+    {
+      title: "Completed Tasks",
+      value: data.acceptedRequests.completed,
+      icon: CheckCircle,
+      color: "bg-green-500",
+      bgColor: "bg-green-50",
+      iconColor: "text-green-600",
+      textColor: "text-green-700",
+    },
+  
   ];
 
   // Requests Cards
