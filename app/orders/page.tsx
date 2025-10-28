@@ -210,63 +210,7 @@ export default function OrdersPage() {
     };
   };
 
-  const handleStatusUpdate = async (
-    orderId: string,
-    newStatus: OrderStatus
-  ) => {
-    try {
-      // Note: You'll need to implement the API endpoint for updating request status
-      const response = await fetch("/api/admin/requests/status", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          requestId: orderId,
-          notification_status: newStatus,
-        }),
-      });
 
-      if (response.ok) {
-        await loadOrders(); // Reload orders to get updated data
-      } else {
-        throw new Error("Failed to update order status");
-      }
-    } catch (error) {
-      console.error("Failed to update order status:", error);
-      alert("Failed to update order status. Please try again.");
-    }
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this request? This action cannot be undone."
-      )
-    )
-      return;
-
-    try {
-      // Note: You'll need to implement the API endpoint for deleting requests
-      const response = await fetch(`/api/admin/requests/${orderId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        await loadOrders();
-        alert("Request deleted successfully");
-      } else {
-        throw new Error("Failed to delete request");
-      }
-    } catch (error) {
-      console.error("Failed to delete request:", error);
-      alert("Failed to delete request. Please try again.");
-    }
-  };
 
   if (loading) {
     return (
@@ -316,8 +260,8 @@ export default function OrdersPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <OrdersTable
           orders={filteredOrders}
-          onStatusUpdate={handleStatusUpdate}
-          onDeleteOrder={handleDeleteOrder}
+          
+          
         />
       </div>
 

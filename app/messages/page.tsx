@@ -41,36 +41,6 @@ export default function AdminMessagesPage() {
     message: string;
   } | null>(null);
 
-  // Fetch messages
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const fetchMessages = async () => {
-    try {
-      setLoading(true);
-
-      if (!token) {
-        showAlert("error", "Authentication token not found");
-        return;
-      }
-
-      const response = await fetch("/api/admin/messages", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-
-      if (data.success) setMessages(data.data);
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      showAlert("error", "Failed to load messages");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 5000);
@@ -261,43 +231,6 @@ export default function AdminMessagesPage() {
       showAlert("error", "Failed to send message to user");
     } finally {
       setSendingToUser(false);
-    }
-  };
-
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm("Are you sure you want to delete this message?")) {
-      return;
-    }
-
-    try {
-      setDeleting(messageId);
-
-      if (!token) {
-        showAlert("error", "Authentication token not found");
-        return;
-      }
-
-      const response = await fetch(`/api/admin/messages?id=${messageId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Remove the message from the local state
-        setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
-        showAlert("success", "Message deleted successfully");
-      } else {
-        showAlert("error", data.message);
-      }
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      showAlert("error", "Failed to delete message");
-    } finally {
-      setDeleting(null);
     }
   };
 

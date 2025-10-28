@@ -231,12 +231,20 @@ export default function AdminWithdrawalsPage() {
 
   const fetchWithdrawals = async () => {
     try {
-      setLoading(true);
-      const response = await fetch("/api/admin/withdrawals");
-      const data = await response.json();
+    setLoading(true);
+    const response = await fetch(
+      "https://tasksfy.com/v1/web/superAdmin/transactions/payment/requests",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const data = await response.json();
+    console.log("Fetched withdrawals data:", data);
 
       if (data.success) {
-        setWithdrawals(data.data);
+        setWithdrawals(data.PaymentWithUserInfo);
       } else {
         showAlert("error", "Failed to load withdrawal requests");
       }
@@ -286,87 +294,6 @@ export default function AdminWithdrawalsPage() {
    fetchStats();
  };
 
-  // Rest of your existing functions (handleApprove, handleReject, etc.) remain the same
-  const handleApprove = async (withdrawalId: string) => {
-    if (!confirm("Are you sure you want to approve this withdrawal request?")) {
-      return;
-    }
-
-    try {
-      setApproving(withdrawalId);
-      const response = await fetch("/api/admin/withdrawals", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          withdrawalId,
-          action: "approve",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setWithdrawals((prev) =>
-          prev.map((w) =>
-            w._id === withdrawalId
-              ? {
-                  ...w,
-                  isPaymentApproved: true,
-                  dateOfPaymentApproval: data.data.dateOfPaymentApproval,
-                  mpesaCode: data.data.mpesaCode,
-                }
-              : w
-          )
-        );
-        showAlert("success", "Withdrawal approved successfully");
-        await fetchStats();
-      } else {
-        showAlert("error", data.message);
-      }
-    } catch (error) {
-      console.error("Error approving withdrawal:", error);
-      showAlert("error", "Failed to approve withdrawal");
-    } finally {
-      setApproving(null);
-    }
-  };
-
-  const handleReject = async (withdrawalId: string) => {
-    if (!confirm("Are you sure you want to reject this withdrawal request?")) {
-      return;
-    }
-
-    try {
-      setRejecting(withdrawalId);
-      const response = await fetch("/api/admin/withdrawals", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          withdrawalId,
-          action: "reject",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setWithdrawals((prev) => prev.filter((w) => w._id !== withdrawalId));
-        showAlert("success", "Withdrawal rejected successfully");
-        await fetchStats();
-      } else {
-        showAlert("error", data.message);
-      }
-    } catch (error) {
-      console.error("Error rejecting withdrawal:", error);
-      showAlert("error", "Failed to reject withdrawal");
-    } finally {
-      setRejecting(null);
-    }
-  };
 
   // Filter withdrawals based on status
   const filteredWithdrawals = withdrawals.filter((withdrawal) => {
@@ -969,9 +896,7 @@ export default function AdminWithdrawalsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+              
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1052,39 +977,7 @@ export default function AdminWithdrawalsPage() {
                       )}
                     </td>
 
-                    {/* Actions */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {!withdrawal.isPaymentApproved ? (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleApprove(withdrawal._id)}
-                            disabled={approving === withdrawal._id}
-                            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                          >
-                            {approving === withdrawal._id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {approving === withdrawal._id ? "..." : "Approve"}
-                          </button>
-                          <button
-                            onClick={() => handleReject(withdrawal._id)}
-                            disabled={rejecting === withdrawal._id}
-                            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                          >
-                            {rejecting === withdrawal._id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <XCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {rejecting === withdrawal._id ? "..." : "Reject"}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">Completed</span>
-                      )}
-                    </td>
+                  
                   </tr>
                 ))
               ) : (

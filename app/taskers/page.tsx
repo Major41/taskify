@@ -231,33 +231,6 @@ export default function TaskersPage() {
     }
   };
 
-  const handleSendMessage = async (taskerId: string, message: string) => {
-    try {
-      // Note: You'll need to implement the message API endpoint
-      const response = await fetch("/api/admin/taskers/send-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          taskerId,
-          message,
-        }),
-      });
-
-      if (response.ok) {
-        alert("Message sent successfully!");
-        return true;
-      } else {
-        throw new Error("Failed to send message");
-      }
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      alert("Failed to send message. Please try again.");
-      return false;
-    }
-  };
 
   if (loading) {
     return (
@@ -306,7 +279,7 @@ export default function TaskersPage() {
           taskers={filteredTaskers}
           onSuspendTasker={handleSuspendTasker}
           onReinstateTasker={handleReinstateTasker}
-          onSendMessage={handleSendMessage}
+          
         />
       </div>
 

@@ -25,7 +25,6 @@ interface OrdersTableProps {
 export default function OrdersTable({
   orders,
   onStatusUpdate,
-  onDeleteOrder,
 }: OrdersTableProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
