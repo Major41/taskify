@@ -25,7 +25,7 @@ interface User {
   avatar_url?: string;
   phone_number?: string;
   isTasker: boolean;
-  role: "user" | "ADMIN" | "SUPER ADMIN";
+  role: "USER" | "ADMIN" | "SUPER ADMIN";
   createdAt: string;
   isPhone_number_verified?: boolean;
 }
@@ -38,7 +38,7 @@ interface ApiUserResponse {
   phone_number: string;
   email: string;
   profile_url: string;
-  role: "user" | "ADMIN" | "SUPER ADMIN";
+  role: "USER" | "ADMIN" | "SUPER ADMIN";
   isPhone_number_verified: boolean;
   isTasker: boolean;
   dateOfRegistration: number;
@@ -146,10 +146,7 @@ export default function AdminApprovalPage() {
     }
   };
 
-  const updateUserRole = async (
-    userId: string,
-    newRole: "USER" | "ADMIN" | "SUPER ADMIN"
-  ) => {
+  const updateUserRole = async (userId: string, isApproved: boolean) => {
     if (!currentUser || currentUser.role !== "SUPER ADMIN") {
       showAlert("error", "Only SUPER ADMIN can modify user roles");
       return;
@@ -157,26 +154,27 @@ export default function AdminApprovalPage() {
 
     try {
       setUpdating(userId);
-      const response = await fetch("/api/admin/users/roles", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          role: newRole,
-          currentUserRole: currentUser.role,
-        }),
-      });
+
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/super/admin/approval?user_id=${userId}&is_approved=${isApproved}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await response.json();
 
-      if (data.success) {
-        // Update the searched user's role
+      if (response.ok) {
+        // Update the searched user's role based on approval status
+        const newRole = isApproved ? "ADMIN" : "USER";
         setSearchedUser((prev) => (prev ? { ...prev, role: newRole } : null));
-        showAlert("success", data.message);
+        showAlert("success", `User role updated to ${newRole} successfully!`);
       } else {
-        showAlert("error", data.message);
+        showAlert("error", data.message || "Failed to update user role");
       }
     } catch (error) {
       console.error("Error updating user role:", error);
@@ -220,7 +218,7 @@ export default function AdminApprovalPage() {
       case "ADMIN":
         return "Admin";
       default:
-        return "USER";
+        return "User";
     }
   };
 
@@ -339,7 +337,6 @@ export default function AdminApprovalPage() {
                 className="w-full text-black pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            
           </div>
 
           <div className="flex space-x-2">
@@ -483,12 +480,10 @@ export default function AdminApprovalPage() {
                     </p>
 
                     <div className="flex flex-wrap gap-2">
-                      {/* Make Admin - show for users */}
+                      {/* Make Admin - show for USER role only */}
                       {searchedUser.role === "USER" && (
                         <button
-                          onClick={() =>
-                            updateUserRole(searchedUser._id, "ADMIN")
-                          }
+                          onClick={() => updateUserRole(searchedUser._id, true)}
                           disabled={updating === searchedUser._id}
                           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
@@ -501,30 +496,11 @@ export default function AdminApprovalPage() {
                         </button>
                       )}
 
-                      {/* Make Super Admin - show for users and admins */}
-                      {(searchedUser.role === "USER" ||
-                        searchedUser.role === "ADMIN") && (
-                        <button
-                          onClick={() =>
-                            updateUserRole(searchedUser._id, "SUPER ADMIN")
-                          }
-                          disabled={updating === searchedUser._id}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {updating === searchedUser._id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <Crown className="h-4 w-4 mr-2" />
-                          )}
-                          Make Super Admin
-                        </button>
-                      )}
-
-                      {/* Remove Admin - show for admins */}
+                      {/* Remove Admin - show for ADMIN role only */}
                       {searchedUser.role === "ADMIN" && (
                         <button
                           onClick={() =>
-                            updateUserRole(searchedUser._id, "USER")
+                            updateUserRole(searchedUser._id, false)
                           }
                           disabled={updating === searchedUser._id}
                           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -538,22 +514,11 @@ export default function AdminApprovalPage() {
                         </button>
                       )}
 
-                      {/* Remove Super Admin - show for super admins */}
+                      {/* Show message for SUPER ADMIN users */}
                       {searchedUser.role === "SUPER ADMIN" && (
-                        <button
-                          onClick={() =>
-                            updateUserRole(searchedUser._id, "USER")
-                          }
-                          disabled={updating === searchedUser._id}
-                          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {updating === searchedUser._id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <ShieldOff className="h-4 w-4 mr-2" />
-                          )}
-                          Remove Super Admin
-                        </button>
+                        <div className="text-sm text-gray-500 italic">
+                          Super Admin role cannot be modified
+                        </div>
                       )}
                     </div>
                   </div>

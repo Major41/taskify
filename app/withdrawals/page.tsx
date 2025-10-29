@@ -907,10 +907,10 @@ export default function AdminWithdrawalsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          {withdrawal.user?.profile_url ? (
+                          {withdrawal.profileUrl ? (
                             <img
-                              src={withdrawal.user.profile_url}
-                              alt={`${withdrawal.user.first_name} ${withdrawal.user.last_name}`}
+                              src={withdrawal.profileUrl}
+                              alt={`${withdrawal.firstName} ${withdrawal.lastName}`}
                               className="h-10 w-10 rounded-full"
                             />
                           ) : (
@@ -921,11 +921,11 @@ export default function AdminWithdrawalsPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {withdrawal.user?.first_name}{" "}
-                            {withdrawal.user?.last_name}
+                            {withdrawal?.firstName}{" "}
+                            {withdrawal?.lastName}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {withdrawal.user?.email}
+                            {withdrawal.email}
                           </div>
                         </div>
                       </div>
