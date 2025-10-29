@@ -50,7 +50,7 @@ export default function AdminMessagesPage() {
     if (!generalMessage.trim()) return;
 
     try {
-      setSending(true);
+      
 
       if (!token) {
         showAlert("error", "Authentication token not found");
@@ -103,9 +103,7 @@ export default function AdminMessagesPage() {
     } catch (error) {
       console.error("Error broadcasting message:", error);
       showAlert("error", "Failed to send message to all users");
-    } finally {
-      setSending(false);
-    }
+    } 
   };
 
   const handleTaskersBroadcast = async () => {
