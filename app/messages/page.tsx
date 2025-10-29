@@ -35,7 +35,7 @@ export default function AdminMessagesPage() {
   const [sending, setSending] = useState(false);
   const [sendingToUser, setSendingToUser] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{
     type: "success" | "error";
     message: string;
