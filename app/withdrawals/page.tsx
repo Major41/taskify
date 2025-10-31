@@ -231,17 +231,17 @@ export default function AdminWithdrawalsPage() {
 
   const fetchWithdrawals = async () => {
     try {
-    setLoading(true);
-    const response = await fetch(
-      "https://tasksfy.com/v1/web/superAdmin/transactions/payment/requests",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    const data = await response.json();
-    console.log("Fetched withdrawals data:", data);
+      setLoading(true);
+      const response = await fetch(
+        "https://tasksfy.com/v1/web/superAdmin/transactions/payment/requests",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      console.log("Fetched withdrawals data:", data);
 
       if (data.success) {
         setWithdrawals(data.PaymentWithUserInfo);
@@ -261,6 +261,24 @@ export default function AdminWithdrawalsPage() {
     setTimeout(() => setAlert(null), 5000);
   };
 
+  const handleApproveWithdrawal = (withdrawal: any) => {
+    // Remove '+' from phone number if present
+    const phoneNumber = withdrawal.phoneNumber.replace("+", "");
+
+    // Logic to approve the withdrawal
+    const response = fetch(
+      `https://tasksfy.com/v1/web/superAdmin/transaction/process/withdrawToMpesa?phoneNumber=${phoneNumber}&amount=${withdrawal.withdrawAmount}&user_id=${withdrawal.userId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    fetchWithdrawals();
+  };
+
   const handleApplyDateFilter = () => {
     if (startDate && endDate && startDate > endDate) {
       showAlert("error", "Start date cannot be after end date");
@@ -270,30 +288,29 @@ export default function AdminWithdrawalsPage() {
     setShowDateFilter(false);
   };
 
- const handleClearDateFilter = () => {
-   setStartDate(null);
-   setEndDate(null);
+  const handleClearDateFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
 
-   // Also reset the manual dates to current date
-   const currentDate = new Date();
-   setManualStartDate({
-     year: currentDate.getFullYear(),
-     month: currentDate.getMonth() + 1,
-     day: currentDate.getDate(),
-   });
-   setManualEndDate({
-     year: currentDate.getFullYear(),
-     month: currentDate.getMonth() + 1,
-     day: currentDate.getDate(),
-   });
+    // Also reset the manual dates to current date
+    const currentDate = new Date();
+    setManualStartDate({
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+      day: currentDate.getDate(),
+    });
+    setManualEndDate({
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+      day: currentDate.getDate(),
+    });
 
-   // Close the filter panel
-   setShowDateFilter(false);
+    // Close the filter panel
+    setShowDateFilter(false);
 
-   // Force refetch stats without any date filters
-   fetchStats();
- };
-
+    // Force refetch stats without any date filters
+    fetchStats();
+  };
 
   // Filter withdrawals based on status
   const filteredWithdrawals = withdrawals.filter((withdrawal) => {
@@ -896,13 +913,15 @@ export default function AdminWithdrawalsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-              
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredWithdrawals.length > 0 ? (
                 filteredWithdrawals.map((withdrawal) => (
-                  <tr key={withdrawal._id} className="hover:bg-gray-50">
+                  <tr key={withdrawal.userId} className="hover:bg-gray-50">
                     {/* Tasker Profile and Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -921,8 +940,7 @@ export default function AdminWithdrawalsPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {withdrawal?.firstName}{" "}
-                            {withdrawal?.lastName}
+                            {withdrawal?.firstName} {withdrawal?.lastName}
                           </div>
                           <div className="text-sm text-gray-500">
                             {withdrawal.email}
@@ -977,7 +995,22 @@ export default function AdminWithdrawalsPage() {
                       )}
                     </td>
 
-                  
+                    {/* Action Button */}
+                    {/* Action Button */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {!withdrawal.isPaymentApproved ? (
+                        <button
+                          onClick={() => handleApproveWithdrawal(withdrawal)}
+                          className="text-white hover:bg-blue-900 font-medium bg-blue-600 px-3 py-1 cursor-pointer rounded-lg border border-green-200  transition-colors"
+                        >
+                          Approve
+                        </button>
+                      ) : (
+                        <div className="text-green-600 hover:text-green-900">
+                          Approved
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (

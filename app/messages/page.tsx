@@ -46,191 +46,112 @@ export default function AdminMessagesPage() {
     setTimeout(() => setAlert(null), 5000);
   };
 
-  const handleGeneralBroadcast = async () => {
-    if (!generalMessage.trim()) return;
+ const handleGeneralBroadcast = async () => {
+   if (!generalMessage.trim()) return;
 
-    try {
-      
+   try {
+     if (!token) {
+       showAlert("error", "Authentication token not found");
+       return;
+     }
 
-      if (!token) {
-        showAlert("error", "Authentication token not found");
-        return;
-      }
+     // Updated route for all users
+     const response = await fetch(
+       `https://tasksfy.com/v1/web/superAdmin/topic/users/send?message=${encodeURIComponent(
+         generalMessage.trim()
+       )}`,
+       {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+         },
+         body: JSON.stringify({
+           recipientId: "null",
+           requestId: "",
+           title: "Message From Tasksfy Inc",
+           body: generalMessage.trim(),
+           type: "",
+           deepLink: "",
+           topic: "users",
+         }),
+       }
+     );
 
-      // Updated route for all users
-      const response = await fetch(
-        `https://tasksfy.com/v1/web/superAdmin/topic/users/send?message=${encodeURIComponent(
-          generalMessage.trim()
-        )}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipientId: "null",
-            requestId: "",
-            title: "Message From Tasksfy Inc",
-            body: generalMessage.trim(),
-            type: "",
-            deepLink: "",
-            topic: "users",
-          }),
-        }
-      );
+     console.log(response);
 
-      console.log(response);
+     // Handle response - get as text since response is "true" or "false"
+     const responseText = await response.text();
+     const isSuccess = responseText === "true";
 
-      // Handle response - first get as text to avoid JSON parsing errors
-      const responseText = await response.text();
-      let data;
+     if (response.ok && isSuccess) {
+       showAlert("success", "Message sent to all users successfully!");
+       setGeneralMessage(""); // Clear the input
+       // Refresh messages to show the new broadcast
+     } else {
+       showAlert("error", "Failed to send message to users");
+     }
+   } catch (error) {
+     console.error("Error broadcasting message:", error);
+     showAlert("error", "Failed to send message to all users");
+   }
+ };
 
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        data = { success: false, message: responseText };
-      }
+ const handleTaskersBroadcast = async () => {
+   if (!taskersMessage.trim()) return;
 
-      if (response.ok) {
-        showAlert("success", "Message sent to all users successfully!");
-        setGeneralMessage(""); // Clear the input
-        // Refresh messages to show the new broadcast
-        fetchMessages();
-      } else {
-        showAlert("error", data.message || "Failed to send message to users");
-      }
-    } catch (error) {
-      console.error("Error broadcasting message:", error);
-      showAlert("error", "Failed to send message to all users");
-    } 
-  };
+   try {
+     setSending(true);
 
-  const handleTaskersBroadcast = async () => {
-    if (!taskersMessage.trim()) return;
+     if (!token) {
+       showAlert("error", "Authentication token not found");
+       return;
+     }
 
-    try {
-      setSending(true);
+     // Updated route for taskers
+     const response = await fetch(
+       `https://tasksfy.com/v1/web/superAdmin/topic/taskers/send?message=${encodeURIComponent(
+         taskersMessage.trim()
+       )}`,
+       {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+         },
+         body: JSON.stringify({
+           recipientId: "null",
+           requestId: "",
+           title: "Message From Tasksfy Inc",
+           body: taskersMessage.trim(),
+           type: "",
+           deepLink: "",
+           topic: "taskers",
+         }),
+       }
+     );
 
-      if (!token) {
-        showAlert("error", "Authentication token not found");
-        return;
-      }
+     console.log(response);
 
-      // Updated route for taskers
-      const response = await fetch(
-        `https://tasksfy.com/v1/web/superAdmin/topic/taskers/send?message=${encodeURIComponent(
-          taskersMessage.trim()
-        )}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipientId: "null",
-            requestId: "",
-            title: "Message From Tasksfy Inc",
-            body: taskersMessage.trim(),
-            type: "",
-            deepLink: "",
-            topic: "taskers",
-          }),
-        }
-      );
+     // Handle response - get as text since response is "true" or "false"
+     const responseText = await response.text();
+     const isSuccess = responseText === "true";
 
-      console.log(response);
-      // Handle response - first get as text to avoid JSON parsing errors
-      const responseText = await response.text();
-      let data;
+     if (response.ok && isSuccess) {
+       showAlert("success", "Message sent to all taskers successfully!");
+       setTaskersMessage(""); // Clear the input
+       // Refresh messages to show the new broadcast
+     } else {
+       showAlert("error", "Failed to send message to taskers");
+     }
+   } catch (error) {
+     console.error("Error broadcasting to taskers:", error);
+     showAlert("error", "Failed to send message to taskers");
+   } finally {
+     setSending(false);
+   }
+ };
 
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        data = { success: false, message: responseText };
-      }
-
-      if (response.ok) {
-        showAlert("success", "Message sent to all taskers successfully!");
-        setTaskersMessage(""); // Clear the input
-        // Refresh messages to show the new broadcast
-        fetchMessages();
-      } else {
-        showAlert("error", data.message || "Failed to send message to taskers");
-      }
-    } catch (error) {
-      console.error("Error broadcasting to taskers:", error);
-      showAlert("error", "Failed to send message to taskers");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleSpecificUserMessage = async () => {
-    if (!specificUserMessage.trim() || !specificUserId.trim()) {
-      showAlert("error", "Please provide both user ID and message");
-      return;
-    }
-
-    try {
-      setSendingToUser(true);
-
-      if (!token) {
-        showAlert("error", "Authentication token not found");
-        return;
-      }
-
-      // Updated route for specific user
-      const response = await fetch(
-        `https://tasksfy.com/v1/web/admin/message/user/by/id/send?user_id=${specificUserId}&message=${encodeURIComponent(
-          specificUserMessage.trim()
-        )}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipientId: specificUserId,
-            requestId: "",
-            title: "Message From Tasksfy Admin",
-            body: specificUserMessage.trim(),
-            type: "",
-            deepLink: "",
-          }),
-        }
-      );
-
-      console.log(response);
-
-      // Handle response - first get as text to avoid JSON parsing errors
-      const responseText = await response.text();
-      let data;
-
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        data = { success: false, message: responseText };
-      }
-
-      if (response.ok) {
-        showAlert("success", "Message sent to user successfully!");
-        setSpecificUserMessage("");
-        setSpecificUserId("");
-        // Refresh messages to show the new message
-        fetchMessages();
-      } else {
-        showAlert("error", data.message || "Failed to send message to user");
-      }
-    } catch (error) {
-      console.error("Error sending message to user:", error);
-      showAlert("error", "Failed to send message to user");
-    } finally {
-      setSendingToUser(false);
-    }
-  };
 
   if (loading) {
     return (
