@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push("https://tasksfy.com/admin_dashboard");
   };
 
   const currentUser = user || {

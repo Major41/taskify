@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -261,23 +262,67 @@ export default function AdminWithdrawalsPage() {
     setTimeout(() => setAlert(null), 5000);
   };
 
-  const handleApproveWithdrawal = (withdrawal: any) => {
-    // Remove '+' from phone number if present
-    const phoneNumber = withdrawal.phoneNumber.replace("+", "");
+const handleApproveWithdrawal = async (withdrawal: any) => {
+  // Check if withdrawal is already processed
+  if (withdrawal.paymentStatus !== "Pending") {
+    toast.error("Payment Already Processed", {
+      description: `This withdrawal has already been ${withdrawal.paymentStatus.toLowerCase()}.`,
+    });
+    return;
+  }
 
-    // Logic to approve the withdrawal
-    const response = fetch(
-      `https://tasksfy.com/v1/web/superAdmin/transaction/process/withdrawToMpesa?phoneNumber=${phoneNumber}&amount=${withdrawal.withdrawAmount}&user_id=${withdrawal.userId}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+  // Remove '+' from phone number if present
+  const phoneNumber = withdrawal.phoneNumber.replace("+", "");
+
+  // Confirmation message for admin
+  const confirmMessage = `Are you sure you want to approve this withdrawal?\n\nPhone: ${phoneNumber}\nAmount: ${withdrawal.withdrawAmount}\nUser ID: ${withdrawal.userId}`;
+
+  // Show confirmation dialog
+  if (window.confirm(confirmMessage)) {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Processing withdrawal...");
+
+      // Logic to approve the withdrawal
+      const response = await fetch(
+        `https://tasksfy.com/v1/web/superAdmin/transaction/process/withdrawToMpesa?phoneNumber=${phoneNumber}&amount=${withdrawal.withdrawAmount}&user_id=${withdrawal.userId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+        toast.success("Withdrawal Approved", {
+          description: "The withdrawal has been successfully processed.",
+        });
+
+        // Refresh withdrawals list on success
+        setTimeout(() => {
+          fetchWithdrawals();
+          console.log("Withdrawals refreshed after M-Pesa callback delay");
+        }, 5000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error("Approval Failed", {
+          description:
+            errorData.message ||
+            "Failed to approve withdrawal. Please try again.",
+        });
       }
-    );
-
-    fetchWithdrawals();
-  };
+    } catch (error) {
+      console.error("Error approving withdrawal:", error);
+      toast.error("Processing Error", {
+        description: "An error occurred while approving withdrawal.",
+      });
+    }
+  }
+};
 
   const handleApplyDateFilter = () => {
     if (startDate && endDate && startDate > endDate) {
@@ -995,7 +1040,6 @@ export default function AdminWithdrawalsPage() {
                       )}
                     </td>
 
-                    {/* Action Button */}
                     {/* Action Button */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {!withdrawal.isPaymentApproved ? (
