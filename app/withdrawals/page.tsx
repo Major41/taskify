@@ -303,10 +303,8 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
         });
 
         // Refresh withdrawals list on success
-        setTimeout(() => {
-          fetchWithdrawals();
-          console.log("Withdrawals refreshed after M-Pesa callback delay");
-        }, 1000);
+        fetchWithdrawals();
+        
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast.error("Approval Failed", {

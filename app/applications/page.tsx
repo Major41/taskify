@@ -77,7 +77,6 @@ export default function ApplicationsPage() {
       }
 
       const data = await response.json();
-      console.log("Full API Response:", data); // Debug log
 
       if (data.success && data.taskersWithReviewsAndSkills) {
         // Transform the API response to match our Tasker interface
@@ -85,7 +84,6 @@ export default function ApplicationsPage() {
           const tasker = item.tasker;
           const user = tasker.user;
 
-          console.log("tasker=",tasker)
 
           return {
             user_id: tasker.tasker_id,
@@ -111,7 +109,6 @@ export default function ApplicationsPage() {
           };
         });
 
-        console.log("Transformed Applications:", taskers); // Debug log
         setApplications(taskers);
       } else {
         console.error("API response structure unexpected:", data);
@@ -173,7 +170,6 @@ export default function ApplicationsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Approval response:", data);
 
         if (data.success) {
           // Refresh applications to get updated status
@@ -208,7 +204,6 @@ export default function ApplicationsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Rejection response:", data);
 
         if (data.success) {
           // Refresh applications to get updated status

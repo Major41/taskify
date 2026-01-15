@@ -35,8 +35,8 @@ export default function ApplicationsTable({
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-      approved: { color: "bg-green-100 text-green-800", label: "Approved" },
+      Pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
+      Approved: { color: "bg-green-100 text-green-800", label: "Approved" },
     };
 
     const config = statusConfig[status] || statusConfig.pending;
