@@ -136,8 +136,8 @@ const handleLogin = async (e: React.FormEvent) => {
         <div className="text-center max-w-md">
           <div className="flex justify-center mb-6">
             <Image
-              src="/logo2.png"
-              alt="TasksFy Logo"
+              src="https://tasksfy.com/admin dashboard/logo.png"
+              alt="Tasksfy Logo"
               className=""
               width={90}
               height={90}

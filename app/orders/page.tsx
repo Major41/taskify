@@ -103,27 +103,88 @@ export default function OrdersPage() {
     }
   };
 
-  const transformApiRequestToOrder = (apiRequest: ApiRequest): Order => {
-    console.log("Transforming API request:", apiRequest);
+  const transformApiRequestToOrder = (apiRequest: any): Order => {
+    // console.log("Transforming API request:", apiRequest);
+
+    // Safely extract date and time information
+    const fromDateTime = apiRequest.scheduled_date
+      ? new Date(
+          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "00:00"}`
+        ).getTime()
+      : apiRequest.date_of_request;
+
+    const toDateTime = apiRequest.scheduled_date
+      ? new Date(
+          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "23:59"}`
+        ).getTime()
+      : apiRequest.date_of_request;
+
     return {
-      id: apiRequest.request_id,
-      requestNumber: apiRequest.receipt_no,
-      taskerName: apiRequest.tasker
-        ? `${apiRequest.tasker.user.first_name} ${apiRequest.tasker.user.last_name}`
+      id: apiRequest.request_id || "",
+      requestNumber: apiRequest.receipt_no || "",
+
+      // Tasker information (from tasker.user object)
+      taskerName: apiRequest.tasker?.user
+        ? `${apiRequest.tasker.user.first_name || ""} ${
+            apiRequest.tasker.user.last_name || ""
+          }`.trim()
         : "Not Assigned",
-      taskerPhone: apiRequest.tasker.user.phone_number,
+      taskerPhone: apiRequest.tasker?.user?.phone_number || "",
+      taskerProfileImage: apiRequest.tasker?.user?.profile_url || "",
+
+      // Client information (from user object)
       clientName: apiRequest.user
-        ? `${apiRequest.user.first_name} ${apiRequest.user.last_name}`
+        ? `${apiRequest.user.first_name || ""} ${
+            apiRequest.user.last_name || ""
+          }`.trim()
         : "Unknown Client",
-      clientPhone: apiRequest?.user?.phone_number,
-      description: apiRequest.description,
-      budget: apiRequest.budget,
-      location: apiRequest.location,
-      category: apiRequest.category,
-      status: apiRequest.notification_status as OrderStatus,
-      createdAt: apiRequest.date_of_request,
-      updatedAt: apiRequest.date_of_request,
-      taskerProfileImage: apiRequest?.tasker?.user?.profile_url,
+      clientPhone: apiRequest.user?.phone_number || "",
+
+      // Task information
+      description: apiRequest.task_description || "",
+      aboutClient: apiRequest.tasker?.tasker_about || "", // Tasker's about section
+      budget: "", // Not present in your API response
+
+      // Images handling
+      images: apiRequest.task_images || [],
+      requestedSkill: apiRequest.requested_skill || "",
+
+      // Date and time
+      fromDate: apiRequest.scheduled_date || "",
+      fromTime: apiRequest.scheduled_time || "",
+      fromDateTime: fromDateTime,
+      toDateTime: toDateTime,
+
+      // Location information
+      location: apiRequest.task_location || "",
+      latitude: apiRequest.task_latitude || null,
+      longitude: apiRequest.task_longitude || null,
+
+      // Category/status
+      category: apiRequest.requested_skill || "", // Using requested_skill as category
+      status: apiRequest.notification_status || "Pending",
+
+      // Timestamps
+      createdAt: apiRequest.date_of_request || Date.now(),
+      updatedAt:
+        apiRequest.date_of_task_notification ||
+        apiRequest.date_of_request ||
+        Date.now(),
+
+      // Additional useful information from your API
+      taskDistance: apiRequest.task_distance || 0,
+      taskerRating: apiRequest.tasker?.tasker_average_rating || 0,
+      clientRating: apiRequest.user?.client_average_rating || 0,
+      taskerCompleteTasks: apiRequest.tasker?.tasker_complete_tasks || 0,
+      clientCompleteTasks: apiRequest.user?.client_complete_tasks || 0,
+      isTaskerApproved: apiRequest.tasker?.is_approved || false,
+      isClientApproved: apiRequest.user?.isClientApproved || false,
+
+      // Tasker job images if needed
+      taskerJobImages: apiRequest.tasker?.job_images || [],
+
+      // Client address for better location context
+      clientAddress: apiRequest.user?.address || "",
     };
   };
 
@@ -162,6 +223,7 @@ export default function OrdersPage() {
       const transformedOrders = allRequests.map(transformApiRequestToOrder);
 
       setOrders(transformedOrders);
+      console.log("Loaded orders:", transformedOrders);
     } catch (error) {
       console.error("Failed to load orders:", error);
       // Fallback to empty array if API fails
@@ -260,8 +322,6 @@ export default function OrdersPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <OrdersTable
           orders={filteredOrders}
-          
-          
         />
       </div>
 

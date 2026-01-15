@@ -85,6 +85,8 @@ export default function ApplicationsPage() {
           const tasker = item.tasker;
           const user = tasker.user;
 
+          console.log("tasker=",tasker)
+
           return {
             user_id: tasker.tasker_id,
             first_name: user?.first_name || "Unknown",
@@ -98,7 +100,7 @@ export default function ApplicationsPage() {
             category: tasker.category || "General",
             created_at: tasker?.tasker_reg_date || new Date().toISOString(),
             avatar_url: user?.profile_url,
-            status: tasker.is_approved ? "approved" : "pending",
+            status: tasker?.user?.tasker_application_status,
             about: tasker.tasker_about,
             idImages: {
               passport: tasker.passport_photo,

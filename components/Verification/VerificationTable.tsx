@@ -173,23 +173,23 @@ export default function VerificationTable({
         id: ref.ref1IdNumber,
         phone: ref.ref1Tell,
         relationship: ref.ref1Relationship,
-        location: ref.ref1Location
+        location: ref.ref1Location,
       },
       {
         name: `${ref.ref2FName} ${ref.ref2LName}`,
         id: ref.ref2IdNumber,
         phone: ref.ref2Tell,
         relationship: ref.ref2Relationship,
-        location: ref.ref2Location
+        location: ref.ref2Location,
       },
       {
         name: `${ref.ref3FName} ${ref.ref3LName}`,
         id: ref.ref3IdNumber,
         phone: ref.ref3Tell,
         relationship: ref.ref3Relationship,
-        location: ref.ref3Location
-      }
-    ].filter(ref => ref.name.trim() !== "");
+        location: ref.ref3Location,
+      },
+    ].filter((ref) => ref.name.trim() !== "");
   };
 
   // Image display component
@@ -287,9 +287,7 @@ export default function VerificationTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Action
-              </th>
+              {/* Removed Action column header */}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -336,30 +334,15 @@ export default function VerificationTable({
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(verification.overallStatus)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {verification.overallStatus === "pending" ? (
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFinalAction(verification.tasker._id, true);
-                          }}
-                          className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Verify Tasker
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-500 text-sm">Verified</span>
-                    )}
-                  </td>
+                  {/* Removed Action column cell */}
                 </tr>
 
                 {/* Expanded Details Row */}
                 {expandedRow === verification._id && (
                   <tr className="bg-gray-50/50">
-                    <td colSpan={6} className="px-6 py-4">
+                    <td colSpan={5} className="px-6 py-4">
+                      {" "}
+                      {/* Changed from 6 to 5 columns */}
                       <div className="bg-white rounded-lg p-6 border border-gray-200">
                         {/* Profile Header */}
                         <div className="flex items-center space-x-4 mb-6">
@@ -578,19 +561,22 @@ export default function VerificationTable({
                                 Status:{" "}
                                 {getVerificationStatus("stage5", verification)}
                               </span>
-                              {canVerifyStage("stage5", verification) && (
-                                <button
-                                  onClick={() =>
-                                    handleStageApproval(
-                                      verification.tasker._id,
-                                      "stage5"
-                                    )
-                                  }
-                                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Final Verification
-                                </button>
+                              {getVerificationStatus("stage5", verification) ===
+                                "Pending" && (
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() =>
+                                      handleFinalAction(
+                                        verification.tasker._id,
+                                        true
+                                      )
+                                    }
+                                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Verify Tasker
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -661,6 +647,29 @@ export default function VerificationTable({
                                   )}
                                 </p>
                               </div>
+                            </div>
+
+                            {/* Show all images in final verification */}
+                            <div>
+                              <h5 className="font-medium text-gray-900 mb-4">
+                                All Verification Documents
+                              </h5>
+                              {getStageImages("stage5", verification).length >
+                              0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {getStageImages("stage5", verification).map(
+                                    (image, index) => (
+                                      <ImageDisplay key={index} image={image} />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                                  <p className="text-gray-500">
+                                    No verification documents available
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
                             {/* Show message if prerequisites not met */}

@@ -242,7 +242,7 @@ export default function AdminWithdrawalsPage() {
         }
       );
       const data = await response.json();
-      console.log("Fetched withdrawals data:", data);
+      // console.log("Fetched withdrawals data:", data);
 
       if (data.success) {
         setWithdrawals(data.PaymentWithUserInfo);
@@ -259,7 +259,7 @@ export default function AdminWithdrawalsPage() {
 
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ type, message });
-    setTimeout(() => setAlert(null), 5000);
+    setTimeout(() => setAlert(null), 1000);
   };
 
 const handleApproveWithdrawal = async (withdrawal: any) => {
@@ -306,7 +306,7 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
         setTimeout(() => {
           fetchWithdrawals();
           console.log("Withdrawals refreshed after M-Pesa callback delay");
-        }, 5000);
+        }, 1000);
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast.error("Approval Failed", {

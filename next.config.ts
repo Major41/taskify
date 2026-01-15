@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
       "192.168.225.93",
       "localhost",
       "127.0.0.1",
+      "taskify.com",
       "tasksfy.com",
       "192.168.100.6",
       // Add other domains you use for images
@@ -22,6 +23,11 @@ const nextConfig: NextConfig = {
         hostname: "192.168.225.93",
         port: "8080",
         pathname: "/image_2_pictures/**",
+      },
+      {
+        protocol: "https",
+        hostname: "taskify.com",
+        pathname: "/api/**",
       },
       {
         protocol: "https",
