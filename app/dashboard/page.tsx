@@ -118,7 +118,7 @@ export default function DashboardPage() {
   ): Promise<number> => {
     try {
       const response = await fetch(
-        `https://tasksfy.com/v1/web/admin/acceptedRequests/by/taskStatus?task_status=${status}`,
+        `https://tasksfy.com/v1/web/admin/acceptedRequests/by/notificationStatus?notification_status=${status}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -134,12 +134,10 @@ export default function DashboardPage() {
       const data = await response.json();
       console.log(
         `Fetched ${status} requests:`,
-        data.acceptedRequests?.length || 0
+        data.requests?.length || 0
       );
-      console.log(`Fetched ${status} requests:`, data.requests?.length || 0);
-      console.log("response data", data);
 
-      return data.acceptedRequests?.length || 0;
+      return data.requests?.length || 0;
     } catch (error) {
       console.error(`Error fetching ${status} accepted requests:`, error);
       return 0;
@@ -170,23 +168,18 @@ export default function DashboardPage() {
 
       // Fetch accepted requests data
       const [
-        pendingAccepted,
         ongoingAccepted,
         inNegotiationAccepted,
         completedAccepted,
         cancelledAccepted,
-        declinedAccepted,
       ] = await Promise.all([
-        fetchAcceptedRequestsByStatus("Pending"),
         fetchAcceptedRequestsByStatus("Ongoing"),
-        fetchAcceptedRequestsByStatus("In-negotiation"),
+        fetchAcceptedRequestsByStatus("Accepted"),
         fetchAcceptedRequestsByStatus("Completed"),
-        fetchAcceptedRequestsByStatus("Cancelled"),
-        fetchAcceptedRequestsByStatus("Declined"),
+        fetchAcceptedRequestsByStatus("Canceled"),
       ]);
 
       const dashboardData: DashboardData = {
-        pendingTasks: pendingAccepted,
         inNegotiation: inNegotiationAccepted,
         canceledTasks: cancelledAccepted,
         expiredTasks: expiredRequests,
@@ -202,12 +195,10 @@ export default function DashboardPage() {
           completed: completedRequests,
         },
         acceptedRequests: {
-          pending: pendingAccepted,
           ongoing: ongoingAccepted,
           inNegotiation: inNegotiationAccepted,
           completed: completedAccepted,
           cancelled: cancelledAccepted,
-          declined: declinedAccepted,
         },
       };
 
