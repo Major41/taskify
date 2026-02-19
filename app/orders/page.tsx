@@ -96,6 +96,7 @@ export default function OrdersPage() {
       }
 
       const data = await response.json();
+      console.log(`Fetched ${status} requests:`, data.requests?.length || 0);
       return data.requests || [];
     } catch (error) {
       console.error(`Error fetching ${status} requests:`, error);
@@ -198,6 +199,7 @@ export default function OrdersPage() {
         expiredRequests,
         declinedRequests,
         acceptedRequests,
+        ongoingRequests,
         completedRequests,
         cancelledRequests,
       ] = await Promise.all([
@@ -205,6 +207,7 @@ export default function OrdersPage() {
         fetchRequestsByStatus("Expired"),
         fetchRequestsByStatus("Declined"),
         fetchRequestsByStatus("Accepted"),
+        fetchRequestsByStatus("Ongoing"),
         fetchRequestsByStatus("Completed"),
         fetchRequestsByStatus("Cancelled"),
       ]);
@@ -215,6 +218,7 @@ export default function OrdersPage() {
         ...expiredRequests,
         ...declinedRequests,
         ...acceptedRequests,
+        ...ongoingRequests,
         ...completedRequests,
         ...cancelledRequests,
       ];
@@ -267,6 +271,7 @@ export default function OrdersPage() {
       Expired: orders.filter((order) => order.status === "Expired").length,
       Declined: orders.filter((order) => order.status === "Declined").length,
       Accepted: orders.filter((order) => order.status === "Accepted").length,
+      Ongoing: orders.filter((order) => order.status === "Ongoing").length,
       Completed: orders.filter((order) => order.status === "Completed").length,
       Cancelled: orders.filter((order) => order.status === "Cancelled").length,
     };
@@ -298,10 +303,7 @@ export default function OrdersPage() {
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
               Task Requests
             </h1>
-            <p className="text-gray-600 mt-1">
-              Showing {filteredOrders.length} of {orders.length} requests
-              {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
-            </p>
+            
           </div>
 
           <div className="mt-4 lg:mt-0">

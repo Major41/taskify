@@ -104,6 +104,8 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
+      console.log(`Fetched ${status} requests:`, data.requests?.length || 0);
+      console.log("response data", data);
       return data.requests?.length || 0;
     } catch (error) {
       console.error(`Error fetching ${status} requests:`, error);
@@ -128,11 +130,14 @@ export default function DashboardPage() {
         throw new Error(`Failed to fetch ${status} accepted requests`);
       }
 
+
       const data = await response.json();
       console.log(
         `Fetched ${status} requests:`,
         data.acceptedRequests?.length || 0
       );
+      console.log(`Fetched ${status} requests:`, data.requests?.length || 0);
+      console.log("response data", data);
 
       return data.acceptedRequests?.length || 0;
     } catch (error) {
@@ -174,7 +179,7 @@ export default function DashboardPage() {
       ] = await Promise.all([
         fetchAcceptedRequestsByStatus("Pending"),
         fetchAcceptedRequestsByStatus("Ongoing"),
-        fetchAcceptedRequestsByStatus("In Negotiation"),
+        fetchAcceptedRequestsByStatus("In-negotiation"),
         fetchAcceptedRequestsByStatus("Completed"),
         fetchAcceptedRequestsByStatus("Cancelled"),
         fetchAcceptedRequestsByStatus("Declined"),

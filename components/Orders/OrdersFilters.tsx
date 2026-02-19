@@ -16,6 +16,7 @@ interface OrdersFiltersProps {
     Expired: number;
     Declined: number;
     Accepted: number;
+    Ongoing: number;
     Completed: number;
     Cancelled: number;
   };
@@ -26,7 +27,8 @@ const statusTabs = [
   { value: "Pending", label: "Pending" },
   { value: "Expired", label: "Expired" },
   { value: "Declined", label: "Declined" },
-  { value: "Accepted", label: "Accepted" },
+  { value: "In-Negotiation", label: "Accepted" },
+  { value: "Ongoing", label: "Ongoing" },
   { value: "Completed", label: "Completed" },
   { value: "Cancelled", label: "Cancelled" },
 ];

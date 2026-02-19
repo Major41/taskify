@@ -130,7 +130,7 @@ export default function DashboardStats({ data }: DashboardStatsProps) {
             labels: [
               "Completed",
               "Ongoing",
-              "In Negotiation",
+              "In-Negotiation",
               "Cancelled",
             ],
             datasets: [

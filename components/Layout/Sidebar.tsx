@@ -102,7 +102,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <Image
-                  src="https://tasksfy.com/admin dashboard/logo.png"
+                  src="https://tasksfy.com/admin_dashboard/logo.png"
                   alt="Tasksfy Logo"
                   width={40}
                   height={40}

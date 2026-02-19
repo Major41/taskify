@@ -9,8 +9,6 @@ import {
   MapPin,
   FileText,
   Clock,
-  ChevronDown,
-  ChevronRight,
   Image as ImageIcon,
   Briefcase,
   CheckCircle,
