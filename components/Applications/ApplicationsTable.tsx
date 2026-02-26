@@ -34,20 +34,21 @@ export default function ApplicationsTable({
     setActiveDropdown(activeDropdown === applicationId ? null : applicationId);
   };
 
-  const getStatusBadge = (isApproved) => {
-    if (isApproved) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          Approved
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          Pending
-        </span>
-      );
-    }
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
+      approved: { color: "bg-green-100 text-green-800", label: "Approved" },
+    };
+
+    const statusKey = status?.toLowerCase() || "pending";
+    const config = statusConfig[statusKey] || statusConfig.pending;
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
+      >
+        {config.label}
+      </span>
+    );
   };
 
   const formatDate = (dateString) => {
@@ -108,6 +109,8 @@ export default function ApplicationsTable({
     setCurrentImageIndex(prevIndex);
     setSelectedImage(allImages[prevIndex]);
   };
+
+  console.log("Selected User:", selectedApplication);
 
   // Get all images from the application for navigation
   const getAllImages = (application) => {
@@ -231,7 +234,7 @@ export default function ApplicationsTable({
                 key={application.user_id}
                 className={`
                   hover:bg-gray-50/50 transition-colors
-                  ${application.is_approved ? "bg-green-50/30" : ""}
+                  ${application.status === "approved" ? "bg-green-50/30" : ""}
                 `}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -269,7 +272,7 @@ export default function ApplicationsTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(application.is_approved)}
+                  {getStatusBadge(application.status)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
@@ -553,8 +556,8 @@ export default function ApplicationsTable({
                 )}
               </div>
 
-              {/* Action Buttons - Using is_approved to determine if pending */}
-              {!selectedApplication.is_approved && (
+              {/* Action Buttons - Approve and Reject */}
+              {selectedApplication.status === "Pending" && (
                 <div className="flex space-x-4 pt-6 border-t">
                   <button
                     onClick={() => {
@@ -580,12 +583,24 @@ export default function ApplicationsTable({
               )}
 
               {/* For approved applications, show a message */}
-              {selectedApplication.is_approved && (
+              {selectedApplication.status === "Approved" && (
                 <div className="pt-6 border-t">
                   <div className="bg-green-50 text-green-800 p-4 rounded-lg text-center">
                     <CheckCircle className="w-6 h-6 mx-auto mb-2" />
                     <p className="font-medium">
                       This application has been approved
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* For rejected applications, show a message */}
+              {selectedApplication.status === "Rejected" && (
+                <div className="pt-6 border-t">
+                  <div className="bg-red-50 text-red-800 p-4 rounded-lg text-center">
+                    <XCircle className="w-6 h-6 mx-auto mb-2" />
+                    <p className="font-medium">
+                      This application has been rejected
                     </p>
                   </div>
                 </div>
