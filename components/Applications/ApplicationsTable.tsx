@@ -27,26 +27,27 @@ export default function ApplicationsTable({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
-  // console.log("ApplicationsTable received applications:", applications);
+  // Debug: Log the selected application data
+  console.log("Selected Application Data:", selectedApplication);
 
   const toggleDropdown = (applicationId) => {
     setActiveDropdown(activeDropdown === applicationId ? null : applicationId);
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      Pending: { color: "bg-yellow-100 text-yellow-800", label: "Pending" },
-      Approved: { color: "bg-green-100 text-green-800", label: "Approved" },
-    };
-
-    const config = statusConfig[status] || statusConfig.pending;
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
-      >
-        {config.label}
-      </span>
-    );
+  const getStatusBadge = (isApproved) => {
+    if (isApproved) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Approved
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          Pending
+        </span>
+      );
+    }
   };
 
   const formatDate = (dateString) => {
@@ -62,12 +63,11 @@ export default function ApplicationsTable({
   };
 
   const viewApplicationDetails = (application) => {
+    console.log("Viewing application details:", application);
     setSelectedApplication(application);
     setShowDetailsModal(true);
     setActiveDropdown(null);
   };
-
-  // console.log("selected application:", selectedApplication);
 
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
@@ -111,12 +111,15 @@ export default function ApplicationsTable({
 
   // Get all images from the application for navigation
   const getAllImages = (application) => {
+    if (!application) return [];
+
     const images = [];
 
     // Add ID images
     if (
       application.idImages?.passport &&
-      !application.idImages.passport.includes("null")
+      !application.idImages.passport.includes("null") &&
+      application.idImages.passport.trim() !== ""
     ) {
       images.push({
         url: application.idImages.passport,
@@ -126,7 +129,8 @@ export default function ApplicationsTable({
     }
     if (
       application.idImages?.id_front &&
-      !application.idImages.id_front.includes("null")
+      !application.idImages.id_front.includes("null") &&
+      application.idImages.id_front.trim() !== ""
     ) {
       images.push({
         url: application.idImages.id_front,
@@ -136,7 +140,8 @@ export default function ApplicationsTable({
     }
     if (
       application.idImages?.id_back &&
-      !application.idImages.id_back.includes("null")
+      !application.idImages.id_back.includes("null") &&
+      application.idImages.id_back.trim() !== ""
     ) {
       images.push({
         url: application.idImages.id_back,
@@ -146,15 +151,17 @@ export default function ApplicationsTable({
     }
 
     // Add work images
-    application.workImages?.forEach((image, index) => {
-      if (image && !image.includes("null")) {
-        images.push({
-          url: image,
-          type: "work",
-          label: `Work Image ${index + 1}`,
-        });
-      }
-    });
+    if (application.workImages && Array.isArray(application.workImages)) {
+      application.workImages.forEach((image, index) => {
+        if (image && !image.includes("null") && image.trim() !== "") {
+          images.push({
+            url: image,
+            type: "work",
+            label: `Work Image ${index + 1}`,
+          });
+        }
+      });
+    }
 
     return images;
   };
@@ -210,7 +217,6 @@ export default function ApplicationsTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date of Application
               </th>
-
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
@@ -225,24 +231,31 @@ export default function ApplicationsTable({
                 key={application.user_id}
                 className={`
                   hover:bg-gray-50/50 transition-colors
-                  ${application.status === "approved" ? "bg-green-50/30" : ""}
+                  ${application.is_approved ? "bg-green-50/30" : ""}
                 `}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Image
-                    src={
-                      application.profile_url ||
-                      "/assets/images/users/default-avatar.jpg"
-                    }
-                    alt={application.first_name}
-                    width={40}
-                    height={40}
-                    className="rounded-lg"
-                  />
+                  <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden">
+                    {application.profile_url ? (
+                      <Image
+                        src={application.profile_url}
+                        alt={application.first_name}
+                        width={40}
+                        height={40}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-xs text-gray-500">
+                          {application.first_name?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {application.first_name}
+                    {application.first_name} {application.last_name}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -255,25 +268,11 @@ export default function ApplicationsTable({
                     {formatDate(application.created_at)}
                   </div>
                 </td>
-
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(application.status)}
+                  {getStatusBadge(application.is_approved)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-2">
-                    {/* Quick Actions for Pending Applications */}
-                    {application.status === "pending" && (
-                      <button
-                        onClick={() =>
-                          onApproveApplication(application.user_id)
-                        }
-                        className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Approve
-                      </button>
-                    )}
-
                     {/* View Details Dropdown */}
                     <div className="relative">
                       <button
@@ -295,21 +294,6 @@ export default function ApplicationsTable({
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </button>
-
-                            {application.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    onApproveApplication(application.user_id);
-                                    setActiveDropdown(null);
-                                  }}
-                                  className="flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50"
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Approve Application
-                                </button>
-                              </>
-                            )}
                           </div>
                         </div>
                       )}
@@ -327,8 +311,6 @@ export default function ApplicationsTable({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              
-
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                   Tasker Application Details
@@ -342,27 +324,35 @@ export default function ApplicationsTable({
               </div>
 
               {/* Profile Header */}
-              {/* Profile Header */}
               <div className="flex items-center space-x-4 mb-6">
-                <Image
-                  src={
-                    selectedApplication.profile_url ||
-                    "/assets/images/users/default-avatar.jpg"
-                  }
-                  alt={selectedApplication.first_name}
-                  width={60}
-                  height={60}
-                  className="rounded-lg"
-                />
+                <div className="w-16 h-16 rounded-lg bg-gray-200 overflow-hidden">
+                  {selectedApplication.profile_url ? (
+                    <Image
+                      src={selectedApplication.profile_url}
+                      alt={selectedApplication.first_name}
+                      width={64}
+                      height={64}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-xl text-gray-500">
+                        {selectedApplication.first_name?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
                     {selectedApplication.first_name}{" "}
                     {selectedApplication.last_name}
                   </h3>
                   <p className="text-gray-600">
-                    {selectedApplication.phone_number}
+                    {selectedApplication.phone_number || "No phone number"}
                   </p>
-                  <p className="text-gray-600">{selectedApplication.email}</p>
+                  <p className="text-gray-600">
+                    {selectedApplication.email || "No email"}
+                  </p>
                 </div>
               </div>
 
@@ -381,25 +371,36 @@ export default function ApplicationsTable({
                 <h4 className="text-lg font-semibold text-gray-900 mb-3">
                   Skills
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedApplication.skills?.map((skill, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="font-medium text-gray-900">
-                        {skill.skill_name}
-                      </h5>
-                      <p className="text-sm text-gray-600">
-                        {skill.category_name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Experience: {skill.skill_experience}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Rate: KSh {skill.work_rate_amount} per{" "}
-                        {skill.work_rate_type}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {selectedApplication.skills &&
+                selectedApplication.skills.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedApplication.skills.map((skill, index) => (
+                      <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                        <h5 className="font-medium text-gray-900">
+                          {skill.skill_name || "Unknown Skill"}
+                        </h5>
+                        {skill.category_name && (
+                          <p className="text-sm text-gray-600">
+                            Category: {skill.category_name}
+                          </p>
+                        )}
+                        {skill.skill_experience && (
+                          <p className="text-sm text-gray-600">
+                            Experience: {skill.skill_experience}
+                          </p>
+                        )}
+                        {skill.work_rate_amount && skill.work_rate_type && (
+                          <p className="text-sm text-gray-600">
+                            Rate: KSh {skill.work_rate_amount} per{" "}
+                            {skill.work_rate_type}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No skills listed</p>
+                )}
               </div>
 
               {/* Identification Images */}
@@ -408,19 +409,21 @@ export default function ApplicationsTable({
                   Identification Images
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Passport Photo */}
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-2">
                       Passport Photo
                     </p>
                     {selectedApplication.idImages?.passport &&
-                    !selectedApplication.idImages.passport.includes("null") ? (
+                    !selectedApplication.idImages.passport.includes("null") &&
+                    selectedApplication.idImages.passport.trim() !== "" ? (
                       <div
                         className="cursor-pointer transform transition-transform hover:scale-105"
                         onClick={() =>
                           openImageViewer(
                             selectedApplication.idImages.passport,
                             "passport",
-                            0
+                            0,
                           )
                         }
                       >
@@ -429,7 +432,7 @@ export default function ApplicationsTable({
                           alt="Passport"
                           width={200}
                           height={150}
-                          className="rounded-lg border object-cover"
+                          className="rounded-lg border object-cover w-full h-32"
                         />
                       </div>
                     ) : (
@@ -438,19 +441,22 @@ export default function ApplicationsTable({
                       </div>
                     )}
                   </div>
+
+                  {/* ID Front */}
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-2">
                       ID Front
                     </p>
                     {selectedApplication.idImages?.id_front &&
-                    !selectedApplication.idImages.id_front.includes("null") ? (
+                    !selectedApplication.idImages.id_front.includes("null") &&
+                    selectedApplication.idImages.id_front.trim() !== "" ? (
                       <div
                         className="cursor-pointer transform transition-transform hover:scale-105"
                         onClick={() =>
                           openImageViewer(
                             selectedApplication.idImages.id_front,
                             "id_front",
-                            1
+                            1,
                           )
                         }
                       >
@@ -459,7 +465,7 @@ export default function ApplicationsTable({
                           alt="ID Front"
                           width={200}
                           height={150}
-                          className="rounded-lg border object-cover"
+                          className="rounded-lg border object-cover w-full h-32"
                         />
                       </div>
                     ) : (
@@ -468,19 +474,22 @@ export default function ApplicationsTable({
                       </div>
                     )}
                   </div>
+
+                  {/* ID Back */}
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-2">
                       ID Back
                     </p>
                     {selectedApplication.idImages?.id_back &&
-                    !selectedApplication.idImages.id_back.includes("null") ? (
+                    !selectedApplication.idImages.id_back.includes("null") &&
+                    selectedApplication.idImages.id_back.trim() !== "" ? (
                       <div
                         className="cursor-pointer transform transition-transform hover:scale-105"
                         onClick={() =>
                           openImageViewer(
                             selectedApplication.idImages.id_back,
                             "id_back",
-                            2
+                            2,
                           )
                         }
                       >
@@ -489,7 +498,7 @@ export default function ApplicationsTable({
                           alt="ID Back"
                           width={200}
                           height={150}
-                          className="rounded-lg border object-cover"
+                          className="rounded-lg border object-cover w-full h-32"
                         />
                       </div>
                     ) : (
@@ -506,49 +515,79 @@ export default function ApplicationsTable({
                 <h4 className="text-lg font-semibold text-gray-900 mb-3">
                   Previous Work Images
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {selectedApplication.workImages?.map((image, index) => (
-                    <div key={index}>
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        Image {index + 1}
-                      </p>
-                      {image && !image.includes("null") ? (
-                        <div
-                          className="cursor-pointer transform transition-transform hover:scale-105"
-                          onClick={() =>
-                            openImageViewer(image, "work", 3 + index)
-                          }
-                        >
-                          <Image
-                            src={image}
-                            alt={`Work sample ${index + 1}`}
-                            width={150}
-                            height={120}
-                            className="rounded-lg border object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-500">No image</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {selectedApplication.workImages &&
+                selectedApplication.workImages.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {selectedApplication.workImages.map((image, index) => (
+                      <div key={index}>
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Image {index + 1}
+                        </p>
+                        {image &&
+                        !image.includes("null") &&
+                        image.trim() !== "" ? (
+                          <div
+                            className="cursor-pointer transform transition-transform hover:scale-105"
+                            onClick={() =>
+                              openImageViewer(image, "work", 3 + index)
+                            }
+                          >
+                            <Image
+                              src={image}
+                              alt={`Work sample ${index + 1}`}
+                              width={150}
+                              height={120}
+                              className="rounded-lg border object-cover w-full h-24"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-500">No image</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No work images provided</p>
+                )}
               </div>
 
-              {/* Action Buttons */}
-              {selectedApplication.status === "pending" && (
+              {/* Action Buttons - Using is_approved to determine if pending */}
+              {!selectedApplication.is_approved && (
                 <div className="flex space-x-4 pt-6 border-t">
                   <button
                     onClick={() => {
                       onApproveApplication(selectedApplication.user_id);
                       closeDetailsModal();
                     }}
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                    className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center font-medium"
                   >
+                    <CheckCircle className="w-5 h-5 mr-2" />
                     Approve Application
                   </button>
+                  <button
+                    onClick={() => {
+                      onRejectApplication(selectedApplication.user_id);
+                      closeDetailsModal();
+                    }}
+                    className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center font-medium"
+                  >
+                    <XCircle className="w-5 h-5 mr-2" />
+                    Reject Application
+                  </button>
+                </div>
+              )}
+
+              {/* For approved applications, show a message */}
+              {selectedApplication.is_approved && (
+                <div className="pt-6 border-t">
+                  <div className="bg-green-50 text-green-800 p-4 rounded-lg text-center">
+                    <CheckCircle className="w-6 h-6 mx-auto mb-2" />
+                    <p className="font-medium">
+                      This application has been approved
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -557,7 +596,7 @@ export default function ApplicationsTable({
       )}
 
       {/* Full Screen Image Viewer */}
-      {imageViewerOpen && selectedImage && (
+      {imageViewerOpen && selectedImage && selectedApplication && (
         <div
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60]"
           onKeyDown={handleKeyDown}
