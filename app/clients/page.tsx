@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ClientsTable from "@/components/Clients/ClientsTable";
 import ClientsFilters from "@/components/Clients/ClientsFilters";
+import Pagination from "@/components/Clients/Pagination";
 import { Client, ClientStats } from "@/types/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -12,12 +13,21 @@ export default function ClientsPage() {
   const { token } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [paginatedClients, setPaginatedClients] = useState<Client[]>([]);
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<
     "all" | "active" | "inactive"
   >("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [prevPage, setPrevPage] = useState<number | null>(null);
+  
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -37,11 +47,21 @@ export default function ClientsPage() {
     filterClients();
   }, [clients, searchQuery, selectedStatus]);
 
-  const loadClients = async () => {
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatus]);
+
+  // Update paginated data when filtered clients or current page changes
+  useEffect(() => {
+    paginateClients();
+  }, [filteredClients, currentPage]);
+
+  const loadClients = async (page = 1) => {
     try {
       setLoading(true);
       const response = await fetch(
-        "https://tasksfy.com/v1/web/admin/clientsWithReviews",
+        `https://tasksfy.com/v1/web/admin/clientsWithReviews?page=${page}&limit=${itemsPerPage}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,9 +74,20 @@ export default function ClientsPage() {
       }
 
       const data = await response.json();
-      console.log("Clients API Response:", data.clientsWithReviews); // Debug log
+      console.log("Clients API Response:", data);
 
       if (data.clientsWithReviews) {
+        // Set pagination info
+        setNextPage(data.nextPage);
+        setPrevPage(data.prevPage);
+        
+        // Calculate total pages based on nextPage presence
+        // This is an approximation - you might want the API to return total pages
+        const totalPagesEstimate = data.nextPage ? 
+          Math.ceil(data.clientsWithReviews.length / itemsPerPage) + 1 : 
+          currentPage;
+        setTotalPages(totalPagesEstimate);
+
         // Filter only clients (non-taskers) and transform the API response
         const clientUsers = data.clientsWithReviews;
 
@@ -70,11 +101,11 @@ export default function ClientsPage() {
           phone: user.user.phone_number || "No phone",
           profile_picture: user.user.profile_url,
           address: user.user.address || "Not specified",
-          is_approved: user.user.isClientApproved, // Clients are typically approved by default
+          is_approved: user.user.isClientApproved,
           joined_date: user.user.dateOfRegistration,
           total_requests: user.user.total_requests || 0,
           client_complete_tasks: user.user.client_complete_tasks,
-          is_active: user.user.is_active !== false, // Default to active if not specified
+          is_active: user.user.is_active !== false,
           isPhone_number_verified: user.user.isPhone_number_verified || false,
           reviews: user.client_reviews,
           client_average_rating: user.user.client_average_rating,
@@ -108,7 +139,7 @@ export default function ClientsPage() {
         0
       );
       const completedRequests = clients.reduce(
-        (sum, client) => sum + (client.completed_requests || 0),
+        (sum, client) => sum + (client.client_complete_tasks || 0),
         0
       );
 
@@ -168,7 +199,44 @@ export default function ClientsPage() {
     setFilteredClients(filtered);
   };
 
-  // Update the handleSuspendClient function
+  const paginateClients = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedClients(filteredClients.slice(startIndex, endIndex));
+    
+    // Recalculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filteredClients.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1); // Ensure at least 1 page
+  };
+
+  const handlePageChange = async (page: number) => {
+    setCurrentPage(page);
+    
+    // If we're going to the next page and it's not in our current data,
+    // we might want to fetch more data from the API
+    if (page > Math.ceil(clients.length / itemsPerPage)) {
+      await loadClients(page);
+    }
+  };
+
+  const handleNextPage = async () => {
+    if (nextPage) {
+      await loadClients(nextPage);
+      setCurrentPage(nextPage);
+    } else if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = async () => {
+    if (prevPage) {
+      await loadClients(prevPage);
+      setCurrentPage(prevPage);
+    } else if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
   const handleSuspendClient = async (clientId: string, reason: string) => {
     try {
       console.log("Suspending client with ID:", clientId, "Reason:", reason);
@@ -185,12 +253,10 @@ export default function ClientsPage() {
         }
       );
 
-      // Check if response is OK first
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Check if response has content before trying to parse JSON
       const contentType = response.headers.get("content-type");
       let responseData;
 
@@ -198,11 +264,9 @@ export default function ClientsPage() {
         responseData = await response.json();
         console.log("Suspend Client API Response:", responseData);
       } else {
-        // If no JSON response, check if response is successful
         const textResponse = await response.text();
         console.log("Suspend Client API Text Response:", textResponse);
 
-        // If we get an empty response but status is OK, consider it successful
         if (response.ok) {
           responseData = { success: true };
         } else {
@@ -212,7 +276,7 @@ export default function ClientsPage() {
 
       if (responseData.success) {
         alert("Client suspended successfully!");
-        await loadClients();
+        await loadClients(currentPage);
         await loadClientStats();
       } else {
         throw new Error(responseData.message || "Failed to suspend client");
@@ -223,7 +287,6 @@ export default function ClientsPage() {
     }
   };
 
-  // Update the handleReinstateClient function (no reason needed for reinstatement)
   const handleReinstateClient = async (clientId: string) => {
     try {
       console.log("Reinstating client with ID:", clientId);
@@ -238,12 +301,10 @@ export default function ClientsPage() {
         }
       );
 
-      // Check if response is OK first
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Check if response has content before trying to parse JSON
       const contentType = response.headers.get("content-type");
       let responseData;
 
@@ -251,11 +312,9 @@ export default function ClientsPage() {
         responseData = await response.json();
         console.log("Reinstate Client API Response:", responseData);
       } else {
-        // If no JSON response, check if response is successful
         const textResponse = await response.text();
         console.log("Reinstate Client API Text Response:", textResponse);
 
-        // If we get an empty response but status is OK, consider it successful
         if (response.ok) {
           responseData = { success: true };
         } else {
@@ -265,7 +324,7 @@ export default function ClientsPage() {
 
       if (responseData.success) {
         alert("Client reinstated successfully!");
-        await loadClients();
+        await loadClients(currentPage);
         await loadClientStats();
       } else {
         throw new Error(responseData.message || "Failed to reinstate client");
@@ -282,7 +341,6 @@ export default function ClientsPage() {
         throw new Error("Authentication token not found");
       }
 
-      // Construct the URL with query parameters
       const url = `https://tasksfy.com/v1/web/admin/message/user/by/id/send?user_id=${clientId}&message=${encodeURIComponent(
         message
       )}`;
@@ -293,8 +351,6 @@ export default function ClientsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        // Since the message is in the URL, you might not need a body
-        // But if the API expects a body, you can include it
         body: JSON.stringify({
           user_id: clientId,
           message: message,
@@ -318,7 +374,7 @@ export default function ClientsPage() {
     }
   };
 
-  if (loading) {
+  if (loading && clients.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -341,7 +397,7 @@ export default function ClientsPage() {
               Clients Account Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {filteredClients.length} of {clients.length} clients
+              Showing {paginatedClients.length} of {filteredClients.length} clients
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -362,12 +418,29 @@ export default function ClientsPage() {
       {/* Clients Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <ClientsTable
-          clients={filteredClients}
+          clients={paginatedClients}
           onSuspendClient={handleSuspendClient}
           onReinstateClient={handleReinstateClient}
           onSendMessage={handleSendMessage}
         />
       </div>
+
+      {/* Pagination */}
+      {filteredClients.length > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={!!nextPage || currentPage < totalPages}
+            hasPrevPage={!!prevPage || currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredClients.length}
+          />
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredClients.length === 0 && !loading && (

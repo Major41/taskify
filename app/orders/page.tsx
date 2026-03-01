@@ -13,6 +13,7 @@ const ORDER_STATUS_VALUES = [
   "Expired",
   "Declined",
   "Accepted",
+  "Ongoing",
   "Completed",
   "Cancelled",
 ] as const;
@@ -58,7 +59,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<Order["status"] | "all">(
-    "all"
+    "all",
   );
   const searchParams = useSearchParams();
 
@@ -79,7 +80,7 @@ export default function OrdersPage() {
   }, [orders, searchQuery, selectedStatus]);
 
   const fetchRequestsByStatus = async (
-    status: string
+    status: string,
   ): Promise<ApiRequest[]> => {
     try {
       const response = await fetch(
@@ -88,7 +89,7 @@ export default function OrdersPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -110,13 +111,13 @@ export default function OrdersPage() {
     // Safely extract date and time information
     const fromDateTime = apiRequest.scheduled_date
       ? new Date(
-          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "00:00"}`
+          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "00:00"}`,
         ).getTime()
       : apiRequest.date_of_request;
 
     const toDateTime = apiRequest.scheduled_date
       ? new Date(
-          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "23:59"}`
+          `${apiRequest.scheduled_date}T${apiRequest.scheduled_time || "23:59"}`,
         ).getTime()
       : apiRequest.date_of_request;
 
@@ -256,7 +257,7 @@ export default function OrdersPage() {
           order.clientPhone.toLowerCase().includes(query) ||
           order.description.toLowerCase().includes(query) ||
           order.location?.toLowerCase().includes(query) ||
-          order.category?.toLowerCase().includes(query)
+          order.category?.toLowerCase().includes(query),
       );
     }
 
@@ -277,8 +278,6 @@ export default function OrdersPage() {
     };
   };
 
-
-
   if (loading) {
     return (
       <div className="p-6">
@@ -293,6 +292,7 @@ export default function OrdersPage() {
   }
 
   const statusCounts = getStatusCounts();
+  console.log("Status counts:", statusCounts);
 
   return (
     <div className="p-6">
@@ -303,7 +303,6 @@ export default function OrdersPage() {
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
               Task Requests
             </h1>
-            
           </div>
 
           <div className="mt-4 lg:mt-0">
@@ -322,9 +321,7 @@ export default function OrdersPage() {
 
       {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
-        <OrdersTable
-          orders={filteredOrders}
-        />
+        <OrdersTable orders={filteredOrders} />
       </div>
 
       {/* Empty State */}

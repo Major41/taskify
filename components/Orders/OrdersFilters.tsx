@@ -27,7 +27,7 @@ const statusTabs = [
   { value: "Pending", label: "Pending" },
   { value: "Expired", label: "Expired" },
   { value: "Declined", label: "Declined" },
-  { value: "In-Negotiation", label: "Accepted" },
+  { value: "Accepted", label: "Accepted" },
   { value: "Ongoing", label: "Ongoing" },
   { value: "Completed", label: "Completed" },
   { value: "Cancelled", label: "Cancelled" },
