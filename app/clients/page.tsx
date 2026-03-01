@@ -11,9 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function ClientsPage() {
   const { token } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
-  const [paginatedClients, setPaginatedClients] = useState<Client[]>([]);
+  const [allClients, setAllClients] = useState<Client[]>([]); // Store all fetched clients
+  const [displayedClients, setDisplayedClients] = useState<Client[]>([]); // Clients to display on current page
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -27,12 +26,12 @@ export default function ClientsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [prevPage, setPrevPage] = useState<number | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
   
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    loadClients();
-    loadClientStats();
+    loadClients(1);
   }, []);
 
   useEffect(() => {
@@ -43,19 +42,10 @@ export default function ClientsPage() {
     }
   }, [searchParams]);
 
+  // Apply filters whenever allClients, searchQuery, or selectedStatus changes
   useEffect(() => {
-    filterClients();
-  }, [clients, searchQuery, selectedStatus]);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedStatus]);
-
-  // Update paginated data when filtered clients or current page changes
-  useEffect(() => {
-    paginateClients();
-  }, [filteredClients, currentPage]);
+    filterAndPaginateClients();
+  }, [allClients, searchQuery, selectedStatus, currentPage]);
 
   const loadClients = async (page = 1) => {
     try {
@@ -81,13 +71,6 @@ export default function ClientsPage() {
         setNextPage(data.nextPage);
         setPrevPage(data.prevPage);
         
-        // Calculate total pages based on nextPage presence
-        // This is an approximation - you might want the API to return total pages
-        const totalPagesEstimate = data.nextPage ? 
-          Math.ceil(data.clientsWithReviews.length / itemsPerPage) + 1 : 
-          currentPage;
-        setTotalPages(totalPagesEstimate);
-
         // Filter only clients (non-taskers) and transform the API response
         const clientUsers = data.clientsWithReviews;
 
@@ -112,68 +95,29 @@ export default function ClientsPage() {
           walletBalance: user.user.walletBalance,
         }));
 
-        setClients(transformedClients);
+        // Store the new clients
+        setAllClients(transformedClients);
+        setCurrentPage(page);
+        
+        // Update total items count (this should come from API ideally)
+        // For now, we'll estimate based on nextPage presence
+        if (!data.nextPage) {
+          setTotalItems(page * itemsPerPage);
+        }
       } else {
         throw new Error(data.message || "Failed to load clients");
       }
     } catch (error) {
       console.error("Failed to load clients:", error);
-      setClients([]);
+      setAllClients([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadClientStats = async () => {
-    try {
-      // Calculate stats from the clients data
-      const totalClients = clients.length;
-      const activeClients = clients.filter(
-        (c) => c.is_active && c.is_approved
-      ).length;
-      const inactiveClients = clients.filter(
-        (c) => !c.is_active || !c.is_approved
-      ).length;
-      const totalRequests = clients.reduce(
-        (sum, client) => sum + (client.total_requests || 0),
-        0
-      );
-      const completedRequests = clients.reduce(
-        (sum, client) => sum + (client.client_complete_tasks || 0),
-        0
-      );
-
-      const calculatedStats: ClientStats = {
-        total: totalClients,
-        active: activeClients,
-        inactive: inactiveClients,
-        total_requests: totalRequests,
-        completed_requests: completedRequests,
-        new_this_month: clients.filter((c) => {
-          const joinedDate = new Date(c.joined_date);
-          const now = new Date();
-          return (
-            joinedDate.getMonth() === now.getMonth() &&
-            joinedDate.getFullYear() === now.getFullYear()
-          );
-        }).length,
-      };
-
-      setStats(calculatedStats);
-    } catch (error) {
-      console.error("Failed to load client stats:", error);
-    }
-  };
-
-  // Reload stats when clients change
-  useEffect(() => {
-    if (clients.length > 0) {
-      loadClientStats();
-    }
-  }, [clients]);
-
-  const filterClients = () => {
-    let filtered = clients;
+  const filterAndPaginateClients = () => {
+    // First, filter the clients
+    let filtered = [...allClients];
 
     // Filter by status
     if (selectedStatus !== "all") {
@@ -196,44 +140,96 @@ export default function ClientsPage() {
       );
     }
 
-    setFilteredClients(filtered);
-  };
+    // Update total filtered count
+    setTotalItems(filtered.length);
+    
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
 
-  const paginateClients = () => {
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    setPaginatedClients(filteredClients.slice(startIndex, endIndex));
+    const paginatedData = filtered.slice(startIndex, endIndex);
     
-    // Recalculate total pages based on filtered results
-    const newTotalPages = Math.ceil(filteredClients.length / itemsPerPage);
-    setTotalPages(newTotalPages || 1); // Ensure at least 1 page
+    setDisplayedClients(paginatedData);
   };
 
+  const loadClientStats = async () => {
+    try {
+      // Calculate stats from the allClients data
+      const totalClients = allClients.length;
+      const activeClients = allClients.filter(
+        (c) => c.is_active && c.is_approved
+      ).length;
+      const inactiveClients = allClients.filter(
+        (c) => !c.is_active || !c.is_approved
+      ).length;
+      const totalRequests = allClients.reduce(
+        (sum, client) => sum + (client.total_requests || 0),
+        0
+      );
+      const completedRequests = allClients.reduce(
+        (sum, client) => sum + (client.client_complete_tasks || 0),
+        0
+      );
+
+      const calculatedStats: ClientStats = {
+        total: totalClients,
+        active: activeClients,
+        inactive: inactiveClients,
+        total_requests: totalRequests,
+        completed_requests: completedRequests,
+        new_this_month: allClients.filter((c) => {
+          const joinedDate = new Date(c.joined_date);
+          const now = new Date();
+          return (
+            joinedDate.getMonth() === now.getMonth() &&
+            joinedDate.getFullYear() === now.getFullYear()
+          );
+        }).length,
+      };
+
+      setStats(calculatedStats);
+    } catch (error) {
+      console.error("Failed to load client stats:", error);
+    }
+  };
+
+  // Reload stats when allClients change
+  useEffect(() => {
+    if (allClients.length > 0) {
+      loadClientStats();
+    }
+  }, [allClients]);
+
   const handlePageChange = async (page: number) => {
-    setCurrentPage(page);
-    
-    // If we're going to the next page and it's not in our current data,
-    // we might want to fetch more data from the API
-    if (page > Math.ceil(clients.length / itemsPerPage)) {
+    // If we're going to a page that requires new data from API
+    if (page > Math.ceil(allClients.length / itemsPerPage) && nextPage) {
       await loadClients(page);
+    } else {
+      setCurrentPage(page);
     }
   };
 
   const handleNextPage = async () => {
     if (nextPage) {
       await loadClients(nextPage);
-      setCurrentPage(nextPage);
     } else if (currentPage < totalPages) {
-      handlePageChange(currentPage + 1);
+      setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePrevPage = async () => {
     if (prevPage) {
       await loadClients(prevPage);
-      setCurrentPage(prevPage);
     } else if (currentPage > 1) {
-      handlePageChange(currentPage - 1);
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -374,7 +370,7 @@ export default function ClientsPage() {
     }
   };
 
-  if (loading && clients.length === 0) {
+  if (loading && allClients.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -397,7 +393,7 @@ export default function ClientsPage() {
               Clients Account Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {paginatedClients.length} of {filteredClients.length} clients
+              Showing {displayedClients.length} of {totalItems} clients
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -408,8 +404,8 @@ export default function ClientsPage() {
               onSearchChange={setSearchQuery}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
-              totalClients={clients.length}
-              filteredCount={filteredClients.length}
+              totalClients={allClients.length}
+              filteredCount={totalItems}
             />
           </div>
         </div>
@@ -418,7 +414,7 @@ export default function ClientsPage() {
       {/* Clients Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <ClientsTable
-          clients={paginatedClients}
+          clients={displayedClients}
           onSuspendClient={handleSuspendClient}
           onReinstateClient={handleReinstateClient}
           onSendMessage={handleSendMessage}
@@ -426,7 +422,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Pagination */}
-      {filteredClients.length > 0 && (
+      {totalItems > 0 && (
         <div className="mt-6">
           <Pagination
             currentPage={currentPage}
@@ -437,13 +433,13 @@ export default function ClientsPage() {
             hasNextPage={!!nextPage || currentPage < totalPages}
             hasPrevPage={!!prevPage || currentPage > 1}
             itemsPerPage={itemsPerPage}
-            totalItems={filteredClients.length}
+            totalItems={totalItems}
           />
         </div>
       )}
 
       {/* Empty State */}
-      {filteredClients.length === 0 && !loading && (
+      {totalItems === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
@@ -464,7 +460,7 @@ export default function ClientsPage() {
             No clients found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            {clients.length === 0
+            {allClients.length === 0
               ? "No clients have registered yet. Clients will appear here once they create accounts."
               : "No clients match your current filters. Try adjusting your search criteria."}
           </p>
@@ -484,7 +480,7 @@ export default function ClientsPage() {
 
       {/* Copyright Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );

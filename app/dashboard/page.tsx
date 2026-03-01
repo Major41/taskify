@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function DashboardPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -114,7 +114,7 @@ export default function DashboardPage() {
   };
 
   const fetchAcceptedRequestsByStatus = async (
-    status: string
+    status: string,
   ): Promise<number> => {
     try {
       const response = await fetch(
@@ -123,19 +123,15 @@ export default function DashboardPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch ${status} accepted requests`);
       }
 
-
       const data = await response.json();
-      console.log(
-        `Fetched ${status} requests:`,
-        data.requests?.length || 0
-      );
+      console.log(`Fetched ${status} requests:`, data.requests?.length || 0);
 
       return data.requests?.length || 0;
     } catch (error) {
@@ -263,7 +259,7 @@ export default function DashboardPage() {
 
       {/* Copyright Footer */}
       <div className="mt-12 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<PaymentStatus | "all">(
-    "all"
+    "all",
   );
   const searchParams = useSearchParams();
 
@@ -38,7 +38,7 @@ export default function PaymentsPage() {
       filter &&
       (filter === "all" ||
         Object.values(["pending", "completed", "failed", "refunded"]).includes(
-          filter
+          filter,
         ))
     ) {
       setSelectedStatus(filter as PaymentStatus | "all");
@@ -67,7 +67,7 @@ export default function PaymentsPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -133,7 +133,7 @@ export default function PaymentsPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -171,7 +171,7 @@ export default function PaymentsPage() {
     // Filter by status
     if (selectedStatus !== "all") {
       filtered = filtered.filter(
-        (payment) => payment.status === selectedStatus
+        (payment) => payment.status === selectedStatus,
       );
     }
 
@@ -183,7 +183,7 @@ export default function PaymentsPage() {
           payment.user?.name?.toLowerCase().includes(query) ||
           payment.user?.phone?.toLowerCase().includes(query) ||
           payment.user?.email?.toLowerCase().includes(query) ||
-          payment.reference?.toLowerCase().includes(query)
+          payment.reference?.toLowerCase().includes(query),
       );
     }
 
@@ -212,7 +212,7 @@ export default function PaymentsPage() {
             paymentId,
             status: "completed",
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -251,7 +251,7 @@ export default function PaymentsPage() {
             paymentId,
             status: "failed",
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -336,7 +336,7 @@ export default function PaymentsPage() {
 
       {/* Copyright Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );

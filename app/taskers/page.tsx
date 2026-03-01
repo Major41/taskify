@@ -5,24 +5,33 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import TaskersTable from "@/components/Taskers/TaskersTable";
 import TaskersFilters from "@/components/Taskers/TaskersFilters";
+import Pagination from "@/components/Clients/Pagination"; // Reuse the same Pagination component
 import { Tasker, TaskerStats } from "@/types/tasker";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function TaskersPage() {
   const { token } = useAuth();
-  const [taskers, setTaskers] = useState<Tasker[]>([]);
-  const [filteredTaskers, setFilteredTaskers] = useState<Tasker[]>([]);
+  const [allTaskers, setAllTaskers] = useState<Tasker[]>([]); // Store all fetched taskers
+  const [displayedTaskers, setDisplayedTaskers] = useState<Tasker[]>([]); // Taskers to display on current page
   const [stats, setStats] = useState<TaskerStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<
     "all" | "active" | "suspended"
   >("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [prevPage, setPrevPage] = useState<number | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
+  
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    loadTaskers();
-    loadTaskerStats();
+    loadTaskers(1);
   }, []);
 
   useEffect(() => {
@@ -33,15 +42,16 @@ export default function TaskersPage() {
     }
   }, [searchParams]);
 
+  // Apply filters whenever allTaskers, searchQuery, or selectedStatus changes
   useEffect(() => {
-    filterTaskers();
-  }, [taskers, searchQuery, selectedStatus]);
+    filterAndPaginateTaskers();
+  }, [allTaskers, searchQuery, selectedStatus, currentPage]);
 
-  const loadTaskers = async () => {
+  const loadTaskers = async (page = 1) => {
     try {
       setLoading(true);
       const response = await fetch(
-        "https://tasksfy.com/v1/web/admin/taskersWithReviews",
+        `https://tasksfy.com/v1/web/admin/taskersWithReviews?page=${page}&limit=${itemsPerPage}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,105 +64,62 @@ export default function TaskersPage() {
       }
 
       const data = await response.json();
-      console.log("Taskers API Response:", data.taskersWithReviewsAndSkills); // Debug log
+      console.log("Taskers API Response:", data);
 
       if (data.success && data.taskersWithReviewsAndSkills) {
+        // Set pagination info
+        setNextPage(data.nextPage);
+        setPrevPage(data.prevPage);
+        
         // Transform the API response to match our Tasker interface
         const transformedTaskers = data.taskersWithReviewsAndSkills.map(
           (tasker: any) => ({
             id: tasker.tasker.tasker_id,
             name:
               `${tasker.tasker.user?.first_name || ""} ${
-                tasker.tasker.user?.last_name
+                tasker.tasker.user?.last_name || ""
               }`.trim() || "Unknown Tasker",
-            email: tasker.tasker.user?.email,
-            phone: tasker.tasker.user?.phone_number,
+            email: tasker.tasker.user?.email || "No email",
+            phone: tasker.tasker.user?.phone_number || "No phone",
             profile_picture: tasker.tasker.user?.profile_url,
             skills: tasker.skills || [],
-            rating: tasker.tasker.tasker_average_rating,
-            completed_tasks: tasker.tasker.tasker_complete_tasks,
-            is_approved: tasker.tasker.is_approved,
-            is_accepting_requests: tasker.tasker.is_accepting_requests,
+            rating: tasker.tasker.tasker_average_rating || 0,
+            completed_tasks: tasker.tasker.tasker_complete_tasks || 0,
+            is_approved: tasker.tasker.is_approved || false,
+            is_accepting_requests: tasker.tasker.is_accepting_requests || false,
             joined_date: tasker.tasker.tasker_reg_date,
-            category: tasker.category,
-            location: tasker.location,
-            address: tasker.tasker.user.address,
-            verification_level1_status:
-              tasker.tasker.user.verification_level1_status,
-            verification_level2_status:
-              tasker.tasker.user.verification_level2_status,
-            verification_level3_status:
-              tasker.tasker.user.verification_level3_status,
-            verification_level4_status:
-              tasker.tasker.user.verification_level4_status,
-            verification_level5_status:
-              tasker.tasker.user.verification_level5_status,
+            category: tasker.category || "",
+            location: tasker.location || "",
+            address: tasker.tasker.user?.address || "Not specified",
+            verification_level1_status: tasker.tasker.user?.verification_level1_status || false,
+            verification_level2_status: tasker.tasker.user?.verification_level2_status || false,
+            verification_level3_status: tasker.tasker.user?.verification_level3_status || false,
+            verification_level4_status: tasker.tasker.user?.verification_level4_status || false,
+            verification_level5_status: tasker.tasker.user?.verification_level5_status || false,
             reviews: tasker.reviews || [],
-            walletBalance: tasker.tasker.user.walletBalance,
-            tasker_average_rating: tasker.tasker.tasker_average_rating,
-            isPhone_number_verified: tasker.tasker.user.isPhone_number_verified,
+            walletBalance: tasker.tasker.user?.walletBalance || 0,
+            tasker_average_rating: tasker.tasker.tasker_average_rating || 0,
+            isPhone_number_verified: tasker.tasker.user?.isPhone_number_verified || false,
           })
         );
 
-        setTaskers(transformedTaskers);
+        // Store the new taskers
+        setAllTaskers(transformedTaskers);
+        setCurrentPage(page);
       } else {
         throw new Error(data.message || "Failed to load taskers");
       }
     } catch (error) {
       console.error("Failed to load taskers:", error);
-      setTaskers([]);
+      setAllTaskers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTaskerStats = async () => {
-    try {
-      // Calculate stats from the taskers data
-      const totalTaskers = taskers.length;
-      const activeTaskers = taskers.filter((t) => t.is_approved).length;
-      const suspendedTaskers = taskers.filter((t) => !t.is_approved).length;
-      const totalCompletedTasks = taskers.reduce(
-        (sum, tasker) => sum + (tasker.completed_tasks || 0),
-        0
-      );
-      const averageRating =
-        taskers.length > 0
-          ? taskers.reduce((sum, tasker) => sum + (tasker.rating || 0), 0) /
-            taskers.length
-          : 0;
-
-      const calculatedStats: TaskerStats = {
-        total: totalTaskers,
-        active: activeTaskers,
-        suspended: suspendedTaskers,
-        completed_tasks: totalCompletedTasks,
-        average_rating: parseFloat(averageRating.toFixed(1)),
-        new_this_month: taskers.filter((t) => {
-          const joinedDate = new Date(t.joined_date);
-          const now = new Date();
-          return (
-            joinedDate.getMonth() === now.getMonth() &&
-            joinedDate.getFullYear() === now.getFullYear()
-          );
-        }).length,
-      };
-
-      setStats(calculatedStats);
-    } catch (error) {
-      console.error("Failed to load tasker stats:", error);
-    }
-  };
-
-  // Reload stats when taskers change
-  useEffect(() => {
-    if (taskers.length > 0) {
-      loadTaskerStats();
-    }
-  }, [taskers]);
-
-  const filterTaskers = () => {
-    let filtered = taskers;
+  const filterAndPaginateTaskers = () => {
+    // First, filter the taskers
+    let filtered = [...allTaskers];
 
     // Filter by status
     if (selectedStatus !== "all") {
@@ -175,10 +142,96 @@ export default function TaskersPage() {
       );
     }
 
-    setFilteredTaskers(filtered);
+    // Update total filtered count
+    setTotalItems(filtered.length);
+    
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
+
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setDisplayedTaskers(paginatedData);
   };
 
-  // In your page.tsx - update the handleSuspendTasker function
+  const loadTaskerStats = async () => {
+    try {
+      // Calculate stats from the allTaskers data
+      const totalTaskers = allTaskers.length;
+      const activeTaskers = allTaskers.filter((t) => t.is_approved).length;
+      const suspendedTaskers = allTaskers.filter((t) => !t.is_approved).length;
+      const totalCompletedTasks = allTaskers.reduce(
+        (sum, tasker) => sum + (tasker.completed_tasks || 0),
+        0
+      );
+      const averageRating =
+        allTaskers.length > 0
+          ? allTaskers.reduce((sum, tasker) => sum + (tasker.rating || 0), 0) /
+            allTaskers.length
+          : 0;
+
+      const calculatedStats: TaskerStats = {
+        total: totalTaskers,
+        active: activeTaskers,
+        suspended: suspendedTaskers,
+        completed_tasks: totalCompletedTasks,
+        average_rating: parseFloat(averageRating.toFixed(1)),
+        new_this_month: allTaskers.filter((t) => {
+          const joinedDate = new Date(t.joined_date);
+          const now = new Date();
+          return (
+            joinedDate.getMonth() === now.getMonth() &&
+            joinedDate.getFullYear() === now.getFullYear()
+          );
+        }).length,
+      };
+
+      setStats(calculatedStats);
+    } catch (error) {
+      console.error("Failed to load tasker stats:", error);
+    }
+  };
+
+  // Reload stats when allTaskers change
+  useEffect(() => {
+    if (allTaskers.length > 0) {
+      loadTaskerStats();
+    }
+  }, [allTaskers]);
+
+  const handlePageChange = async (page: number) => {
+    // If we're going to a page that requires new data from API
+    if (page > Math.ceil(allTaskers.length / itemsPerPage) && nextPage) {
+      await loadTaskers(page);
+    } else {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleNextPage = async () => {
+    if (nextPage) {
+      await loadTaskers(nextPage);
+    } else if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = async () => {
+    if (prevPage) {
+      await loadTaskers(prevPage);
+    } else if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   const handleSuspendTasker = async (taskerId: string, reason: string) => {
     try {
       const response = await fetch(
@@ -194,7 +247,7 @@ export default function TaskersPage() {
       );
 
       if (response.ok) {
-        await loadTaskers();
+        await loadTaskers(currentPage);
         await loadTaskerStats();
         alert("Tasker suspended successfully!");
       } else {
@@ -219,7 +272,7 @@ export default function TaskersPage() {
       );
 
       if (response.ok) {
-        await loadTaskers();
+        await loadTaskers(currentPage);
         await loadTaskerStats();
         alert("Tasker reinstated successfully!");
       } else {
@@ -231,8 +284,7 @@ export default function TaskersPage() {
     }
   };
 
-
-  if (loading) {
+  if (loading && allTaskers.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -255,7 +307,7 @@ export default function TaskersPage() {
               Taskers Account Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {filteredTaskers.length} of {taskers.length} taskers
+              Showing {displayedTaskers.length} of {totalItems} taskers
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -266,8 +318,8 @@ export default function TaskersPage() {
               onSearchChange={setSearchQuery}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
-              totalTaskers={taskers.length}
-              filteredCount={filteredTaskers.length}
+              totalTaskers={allTaskers.length}
+              filteredCount={totalItems}
             />
           </div>
         </div>
@@ -276,15 +328,31 @@ export default function TaskersPage() {
       {/* Taskers Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <TaskersTable
-          taskers={filteredTaskers}
+          taskers={displayedTaskers}
           onSuspendTasker={handleSuspendTasker}
           onReinstateTasker={handleReinstateTasker}
-          
         />
       </div>
 
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={!!nextPage || currentPage < totalPages}
+            hasPrevPage={!!prevPage || currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+          />
+        </div>
+      )}
+
       {/* Empty State */}
-      {filteredTaskers.length === 0 && !loading && (
+      {totalItems === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
@@ -305,7 +373,7 @@ export default function TaskersPage() {
             No taskers found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            {taskers.length === 0
+            {allTaskers.length === 0
               ? "No taskers have registered yet. Taskers will appear here once they create accounts."
               : "No taskers match your current filters. Try adjusting your search criteria."}
           </p>
@@ -325,7 +393,7 @@ export default function TaskersPage() {
 
       {/* Copyright Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );

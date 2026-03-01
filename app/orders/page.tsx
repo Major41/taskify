@@ -366,7 +366,7 @@ export default function OrdersPage() {
 
       {/* Copyright Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );

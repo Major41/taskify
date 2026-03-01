@@ -29,7 +29,7 @@ export default function ApplicationsPage() {
   const { token } = useAuth();
   const [applications, setApplications] = useState<Tasker[]>([]);
   const [filteredApplications, setFilteredApplications] = useState<Tasker[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,7 +69,7 @@ export default function ApplicationsPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -83,7 +83,6 @@ export default function ApplicationsPage() {
         const taskers = data.taskersWithReviewsAndSkills.map((item: any) => {
           const tasker = item.tasker;
           const user = tasker.user;
-
 
           return {
             user_id: tasker.tasker_id,
@@ -146,9 +145,9 @@ export default function ApplicationsPage() {
             tasker.skills.some(
               (skill) =>
                 skill.skill_name &&
-                skill.skill_name.toLowerCase().includes(query)
+                skill.skill_name.toLowerCase().includes(query),
             )) ||
-          (tasker.category && tasker.category.toLowerCase().includes(query))
+          (tasker.category && tasker.category.toLowerCase().includes(query)),
       );
     }
 
@@ -165,7 +164,7 @@ export default function ApplicationsPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -199,7 +198,7 @@ export default function ApplicationsPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (response.ok) {
@@ -314,7 +313,7 @@ export default function ApplicationsPage() {
 
       {/* Copyright Footer */}
       <div className="mt-8 text-center text-gray-500 text-sm">
-        Copyright Tasksfy Inc © 2025.
+        Copyright Tasksfy Inc © 2026.
       </div>
     </div>
   );
