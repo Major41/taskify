@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Pagination from "@/components/Clients/Pagination";
 
 interface MpesaRecord {
   _id: string;
@@ -29,7 +30,8 @@ interface MpesaRecord {
 
 export default function AdminRecordsPage() {
   const { token } = useAuth();
-  const [records, setRecords] = useState<MpesaRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<MpesaRecord[]>([]);
+  const [displayedRecords, setDisplayedRecords] = useState<MpesaRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<
@@ -37,9 +39,20 @@ export default function AdminRecordsPage() {
   >("all");
   const [exporting, setExporting] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   useEffect(() => {
     fetchRecords();
   }, []);
+
+  // Apply filters and pagination whenever data or filters change
+  useEffect(() => {
+    filterAndPaginateRecords();
+  }, [allRecords, searchTerm, filterStatus, currentPage]);
 
   const fetchRecords = async () => {
     try {
@@ -58,13 +71,13 @@ export default function AdminRecordsPage() {
       }
 
       const data = await response.json();
-      console.log("API Response:", data); // Debug log
+      console.log("API Response:", data);
 
       if (data.success && data.mpesaPaymentRecords) {
         // Transform the API response to match our interface
         const transformedRecords = data.mpesaPaymentRecords.map(
           (record: any, index: number) => ({
-            _id: record.CheckoutRequestID || `record-${index}`, // Use CheckoutRequestID as _id
+            _id: record.CheckoutRequestID || `record-${index}`,
             CheckoutRequestID: record.CheckoutRequestID,
             clientId: record.clientId,
             MerchantRequestID: record.MerchantRequestID,
@@ -77,43 +90,73 @@ export default function AdminRecordsPage() {
           })
         );
 
-        setRecords(transformedRecords);
+        setAllRecords(transformedRecords);
       } else {
         console.error("Failed to load records:", data.message);
-        setRecords([]);
+        setAllRecords([]);
       }
     } catch (error) {
       console.error("Error fetching records:", error);
-      setRecords([]);
+      setAllRecords([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter records based on search and status
-  const filteredRecords = records.filter((record) => {
-    const matchesSearch =
-      record.CheckoutRequestID.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      ) ||
-      record.PhoneNumber.includes(searchTerm) ||
-      record.MpesaReceiptNumber.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      ) ||
-      record.Amount.includes(searchTerm) ||
-      record.MerchantRequestID.toLowerCase().includes(searchTerm.toLowerCase());
+  const filterAndPaginateRecords = () => {
+    // First, filter the records
+    let filtered = [...allRecords];
 
-    const matchesStatus =
-      filterStatus === "all" ||
-      (filterStatus === "success" && record.ResultCode === 0) ||
-      (filterStatus === "failed" && record.ResultCode !== 0);
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (record) =>
+          record.CheckoutRequestID.toLowerCase().includes(
+            searchTerm.toLowerCase()
+          ) ||
+          record.PhoneNumber.includes(searchTerm) ||
+          record.MpesaReceiptNumber.toLowerCase().includes(
+            searchTerm.toLowerCase()
+          ) ||
+          record.Amount.includes(searchTerm) ||
+          record.MerchantRequestID.toLowerCase().includes(
+            searchTerm.toLowerCase()
+          )
+      );
+    }
 
-    return matchesSearch && matchesStatus;
-  });
+    // Filter by status
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((record) =>
+        filterStatus === "success" 
+          ? record.ResultCode === 0 
+          : record.ResultCode !== 0
+      );
+    }
 
-  const successCount = records.filter((r) => r.ResultCode === 0).length;
-  const failedCount = records.filter((r) => r.ResultCode !== 0).length;
-  const totalCount = records.length;
+    // Update total filtered count
+    setTotalItems(filtered.length);
+    
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
+
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setDisplayedRecords(paginatedData);
+  };
+
+  const successCount = allRecords.filter((r) => r.ResultCode === 0).length;
+  const failedCount = allRecords.filter((r) => r.ResultCode !== 0).length;
+  const totalCount = allRecords.length;
 
   const formatDateTime = (dateString: string) => {
     try {
@@ -163,7 +206,7 @@ export default function AdminRecordsPage() {
         "Description",
         "Client ID",
       ];
-      const csvData = filteredRecords.map((record) => {
+      const csvData = displayedRecords.map((record) => {
         const { date, time } = formatDateTime(record.TransactionDate);
         const status = getStatusInfo(record.ResultCode).text;
 
@@ -201,7 +244,33 @@ export default function AdminRecordsPage() {
     }
   };
 
-  if (loading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
+
+  const handleStatusFilter = (status: "all" | "success" | "failed") => {
+    setFilterStatus(status);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  if (loading && allRecords.length === 0) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -215,7 +284,8 @@ export default function AdminRecordsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">MPESA Records</h1>
           <p className="text-gray-600 mt-2">
-            View all MPESA transaction records and payments
+            Showing {displayedRecords.length} of {totalItems} records
+            {(searchTerm || filterStatus !== "all") && " (filtered)"}
           </p>
         </div>
 
@@ -248,30 +318,106 @@ export default function AdminRecordsPage() {
               type="text"
               placeholder="Search by receipt, phone, amount..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full text-black pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500/30 transition-all"
             />
           </div>
 
-          {/* Filter and Export */}
-          <div className="flex gap-3 w-full sm:w-auto">
-           
-
-            {/* Export Button */}
+          {/* Status Filter Buttons */}
+          <div className="flex gap-2">
             <button
-              onClick={exportToCSV}
-              disabled={exporting || filteredRecords.length === 0}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={() => handleStatusFilter("all")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterStatus === "all"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             >
-              {exporting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Export CSV
+              All
+            </button>
+            <button
+              onClick={() => handleStatusFilter("success")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterStatus === "success"
+                  ? "bg-green-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Success
+            </button>
+            <button
+              onClick={() => handleStatusFilter("failed")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterStatus === "failed"
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Failed
             </button>
           </div>
+
+          {/* Export Button */}
+          <button
+            onClick={exportToCSV}
+            disabled={exporting || displayedRecords.length === 0}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Export CSV
+          </button>
         </div>
+
+        {/* Active Filter Indicator */}
+        {(searchTerm || filterStatus !== "all") && (
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-sm text-gray-500">Active filters:</span>
+            {searchTerm && (
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                Search: {searchTerm}
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCurrentPage(1);
+                  }}
+                  className="ml-1 hover:text-blue-900"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterStatus !== "all" && (
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                Status: {filterStatus === "success" ? "Success" : "Failed"}
+                <button
+                  onClick={() => {
+                    setFilterStatus("all");
+                    setCurrentPage(1);
+                  }}
+                  className="ml-1 hover:text-green-900"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {(searchTerm || filterStatus !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterStatus("all");
+                  setCurrentPage(1);
+                }}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Records Table */}
@@ -301,8 +447,8 @@ export default function AdminRecordsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRecords.length > 0 ? (
-                filteredRecords.map((record) => {
+              {displayedRecords.length > 0 ? (
+                displayedRecords.map((record) => {
                   const { date, time } = formatDateTime(record.TransactionDate);
                   const statusInfo = getStatusInfo(record.ResultCode);
                   const StatusIcon = statusInfo.icon;
@@ -317,7 +463,7 @@ export default function AdminRecordsPage() {
                         <div className="text-xs text-gray-500">
                           {record.MerchantRequestID}
                         </div>
-                      </td>
+                       </td>
 
                       {/* Phone Number */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -325,7 +471,7 @@ export default function AdminRecordsPage() {
                           <Phone className="h-4 w-4 text-gray-400 mr-2" />
                           {record.PhoneNumber}
                         </div>
-                      </td>
+                       </td>
 
                       {/* Amount */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -333,7 +479,7 @@ export default function AdminRecordsPage() {
                           <DollarSign className="h-4 w-4 text-gray-400 mr-1" />
                           KES {parseInt(record.Amount).toLocaleString()}
                         </div>
-                      </td>
+                       </td>
 
                       {/* Date & Time */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -344,7 +490,7 @@ export default function AdminRecordsPage() {
                             <div className="text-gray-500 text-xs">{time}</div>
                           </div>
                         </div>
-                      </td>
+                       </td>
 
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -359,7 +505,7 @@ export default function AdminRecordsPage() {
                             {record.ResultDesc}
                           </div>
                         )}
-                      </td>
+                       </td>
 
                       {/* Receipt Number */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -369,7 +515,7 @@ export default function AdminRecordsPage() {
                             {record.MpesaReceiptNumber || "N/A"}
                           </span>
                         </div>
-                      </td>
+                       </td>
                     </tr>
                   );
                 })
@@ -386,6 +532,18 @@ export default function AdminRecordsPage() {
                           ? "No records match your search criteria. Try adjusting your search or filter."
                           : "No MPESA transaction records found."}
                       </p>
+                      {(searchTerm || filterStatus !== "all") && (
+                        <button
+                          onClick={() => {
+                            setSearchTerm("");
+                            setFilterStatus("all");
+                            setCurrentPage(1);
+                          }}
+                          className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        >
+                          Clear all filters
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -395,11 +553,28 @@ export default function AdminRecordsPage() {
         </div>
       </div>
 
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={currentPage < totalPages}
+            hasPrevPage={currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+          />
+        </div>
+      )}
+
       {/* Table Footer Info */}
-      {filteredRecords.length > 0 && (
+      {displayedRecords.length > 0 && (
         <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
           <div>
-            Showing {filteredRecords.length} of {records.length} records
+            Showing {displayedRecords.length} of {totalItems} records
           </div>
           <div className="flex space-x-4">
             <span className="flex items-center">

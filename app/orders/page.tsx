@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import OrdersTable from "@/components/Orders/OrdersTable";
 import OrdersFilters from "@/components/Orders/OrdersFilters";
+import Pagination from "@/components/Clients/Pagination";
 import { Order, OrderStatus } from "@/types/order";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -54,13 +55,20 @@ interface ApiRequest {
 
 export default function OrdersPage() {
   const { token } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]); // Store all fetched orders
+  const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]); // Orders to display on current page
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<Order["status"] | "all">(
     "all",
   );
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -75,9 +83,10 @@ export default function OrdersPage() {
     }
   }, [searchParams]);
 
+  // Apply filters whenever allOrders, searchQuery, or selectedStatus changes
   useEffect(() => {
-    filterOrders();
-  }, [orders, searchQuery, selectedStatus]);
+    filterAndPaginateOrders();
+  }, [allOrders, searchQuery, selectedStatus, currentPage]);
 
   const fetchRequestsByStatus = async (
     status: string,
@@ -106,8 +115,6 @@ export default function OrdersPage() {
   };
 
   const transformApiRequestToOrder = (apiRequest: any): Order => {
-    // console.log("Transforming API request:", apiRequest);
-
     // Safely extract date and time information
     const fromDateTime = apiRequest.scheduled_date
       ? new Date(
@@ -144,8 +151,8 @@ export default function OrdersPage() {
 
       // Task information
       description: apiRequest.task_description || "",
-      aboutClient: apiRequest.tasker?.tasker_about || "", // Tasker's about section
-      budget: "", // Not present in your API response
+      aboutClient: apiRequest.tasker?.tasker_about || "",
+      budget: "",
 
       // Images handling
       images: apiRequest.task_images || [],
@@ -163,7 +170,7 @@ export default function OrdersPage() {
       longitude: apiRequest.task_longitude || null,
 
       // Category/status
-      category: apiRequest.requested_skill || "", // Using requested_skill as category
+      category: apiRequest.requested_skill || "",
       status: apiRequest.notification_status || "Pending",
 
       // Timestamps
@@ -227,19 +234,19 @@ export default function OrdersPage() {
       // Transform API requests to Order format
       const transformedOrders = allRequests.map(transformApiRequestToOrder);
 
-      setOrders(transformedOrders);
+      setAllOrders(transformedOrders);
       console.log("Loaded orders:", transformedOrders);
     } catch (error) {
       console.error("Failed to load orders:", error);
-      // Fallback to empty array if API fails
-      setOrders([]);
+      setAllOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterOrders = () => {
-    let filtered = orders;
+  const filterAndPaginateOrders = () => {
+    // First, filter the orders
+    let filtered = [...allOrders];
 
     // Filter by status
     if (selectedStatus !== "all") {
@@ -261,24 +268,59 @@ export default function OrdersPage() {
       );
     }
 
-    setFilteredOrders(filtered);
+    // Update total filtered count
+    setTotalItems(filtered.length);
+
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
+
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+
+    setDisplayedOrders(paginatedData);
   };
 
   // Calculate counts for each status
   const getStatusCounts = () => {
     return {
-      all: orders.length,
-      Pending: orders.filter((order) => order.status === "Pending").length,
-      Expired: orders.filter((order) => order.status === "Expired").length,
-      Declined: orders.filter((order) => order.status === "Declined").length,
-      Accepted: orders.filter((order) => order.status === "Accepted").length,
-      Ongoing: orders.filter((order) => order.status === "Ongoing").length,
-      Completed: orders.filter((order) => order.status === "Completed").length,
-      Cancelled: orders.filter((order) => order.status === "Cancelled").length,
+      all: allOrders.length,
+      Pending: allOrders.filter((order) => order.status === "Pending").length,
+      Expired: allOrders.filter((order) => order.status === "Expired").length,
+      Declined: allOrders.filter((order) => order.status === "Declined").length,
+      Accepted: allOrders.filter((order) => order.status === "Accepted").length,
+      Ongoing: allOrders.filter((order) => order.status === "Ongoing").length,
+      Completed: allOrders.filter((order) => order.status === "Completed")
+        .length,
+      Cancelled: allOrders.filter((order) => order.status === "Cancelled")
+        .length,
     };
   };
 
-  if (loading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  if (loading && allOrders.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -292,7 +334,6 @@ export default function OrdersPage() {
   }
 
   const statusCounts = getStatusCounts();
-  console.log("Status counts:", statusCounts);
 
   return (
     <div className="p-6">
@@ -303,6 +344,10 @@ export default function OrdersPage() {
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
               Task Requests
             </h1>
+            <p className="text-gray-600 mt-1">
+              Showing {displayedOrders.length} of {totalItems} requests
+              {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
+            </p>
           </div>
 
           <div className="mt-4 lg:mt-0">
@@ -311,8 +356,8 @@ export default function OrdersPage() {
               onSearchChange={setSearchQuery}
               selectedStatus={selectedStatus}
               onStatusChange={setSelectedStatus}
-              totalOrders={orders.length}
-              filteredCount={filteredOrders.length}
+              totalOrders={allOrders.length}
+              filteredCount={totalItems}
               statusCounts={statusCounts}
             />
           </div>
@@ -321,11 +366,28 @@ export default function OrdersPage() {
 
       {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
-        <OrdersTable orders={filteredOrders} />
+        <OrdersTable orders={displayedOrders} />
       </div>
 
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={currentPage < totalPages}
+            hasPrevPage={currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+          />
+        </div>
+      )}
+
       {/* Empty State */}
-      {filteredOrders.length === 0 && !loading && (
+      {totalItems === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
@@ -346,7 +408,7 @@ export default function OrdersPage() {
             No requests found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            {orders.length === 0
+            {allOrders.length === 0
               ? "No requests have been created yet. Requests will appear here once clients start making requests."
               : "No requests match your current filters. Try adjusting your search criteria."}
           </p>

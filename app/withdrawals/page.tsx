@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Pagination from "@/components/Clients/Pagination";
 
 interface WithdrawalRequest {
   _id: string;
@@ -47,7 +48,8 @@ interface StatsData {
 
 export default function AdminWithdrawalsPage() {
   const { token } = useAuth();
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [allWithdrawals, setAllWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [displayedWithdrawals, setDisplayedWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
@@ -66,6 +68,12 @@ export default function AdminWithdrawalsPage() {
     totalCompleted: 0,
     netProfit: 0,
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Date range state with individual date controls
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -93,6 +101,11 @@ export default function AdminWithdrawalsPage() {
     fetchWithdrawals();
     fetchStats();
   }, []);
+
+  // Apply filters and pagination whenever data or filters change
+  useEffect(() => {
+    filterAndPaginateWithdrawals();
+  }, [allWithdrawals, filterStatus, currentPage]);
 
   // Generate years (last 10 years + next 2 years)
   const generateYears = () => {
@@ -242,10 +255,9 @@ export default function AdminWithdrawalsPage() {
         }
       );
       const data = await response.json();
-      // console.log("Fetched withdrawals data:", data);
 
       if (data.success) {
-        setWithdrawals(data.PaymentWithUserInfo);
+        setAllWithdrawals(data.PaymentWithUserInfo);
       } else {
         showAlert("error", "Failed to load withdrawal requests");
       }
@@ -257,70 +269,103 @@ export default function AdminWithdrawalsPage() {
     }
   };
 
+  const filterAndPaginateWithdrawals = () => {
+    // First, filter the withdrawals
+    let filtered = [...allWithdrawals];
+
+    // Filter by status
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((withdrawal) =>
+        filterStatus === "pending" 
+          ? !withdrawal.isPaymentApproved 
+          : withdrawal.isPaymentApproved
+      );
+    }
+
+    // Update total filtered count
+    setTotalItems(filtered.length);
+    
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
+
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setDisplayedWithdrawals(paginatedData);
+  };
+
   const showAlert = (type: "success" | "error", message: string) => {
     setAlert({ type, message });
     setTimeout(() => setAlert(null), 1000);
   };
 
-const handleApproveWithdrawal = async (withdrawal: any) => {
-  // Check if withdrawal is already processed
-  if (withdrawal.paymentStatus !== "Pending") {
-    toast.error("Payment Already Processed", {
-      description: `This withdrawal has already been ${withdrawal.paymentStatus.toLowerCase()}.`,
-    });
-    return;
-  }
+  const handleApproveWithdrawal = async (withdrawal: any) => {
+    // Check if withdrawal is already processed
+    if (withdrawal.paymentStatus !== "Pending") {
+      toast.error("Payment Already Processed", {
+        description: `This withdrawal has already been ${withdrawal.paymentStatus.toLowerCase()}.`,
+      });
+      return;
+    }
 
-  // Remove '+' from phone number if present
-  const phoneNumber = withdrawal.phoneNumber.replace("+", "");
+    // Remove '+' from phone number if present
+    const phoneNumber = withdrawal.phoneNumber.replace("+", "");
 
-  // Confirmation message for admin
-  const confirmMessage = `Are you sure you want to approve this withdrawal?\n\nPhone: ${phoneNumber}\nAmount: ${withdrawal.withdrawAmount}\nUser ID: ${withdrawal.userId}`;
+    // Confirmation message for admin
+    const confirmMessage = `Are you sure you want to approve this withdrawal?\n\nPhone: ${phoneNumber}\nAmount: ${withdrawal.withdrawAmount}\nUser ID: ${withdrawal.userId}`;
 
-  // Show confirmation dialog
-  if (window.confirm(confirmMessage)) {
-    try {
-      // Show loading toast
-      const loadingToast = toast.loading("Processing withdrawal...");
+    // Show confirmation dialog
+    if (window.confirm(confirmMessage)) {
+      try {
+        // Show loading toast
+        const loadingToast = toast.loading("Processing withdrawal...");
 
-      // Logic to approve the withdrawal
-      const response = await fetch(
-        `https://tasksfy.com/v1/web/superAdmin/transaction/process/withdrawToMpesa?phoneNumber=${phoneNumber}&amount=${withdrawal.withdrawAmount}&user_id=${withdrawal.userId}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Logic to approve the withdrawal
+        const response = await fetch(
+          `https://tasksfy.com/v1/web/superAdmin/transaction/process/withdrawToMpesa?phoneNumber=${phoneNumber}&amount=${withdrawal.withdrawAmount}&user_id=${withdrawal.userId}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+
+        if (response.ok) {
+          toast.success("Withdrawal Approved", {
+            description: "The withdrawal has been successfully processed.",
+          });
+
+          // Refresh withdrawals list on success
+          fetchWithdrawals();
+          
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          toast.error("Approval Failed", {
+            description:
+              errorData.message ||
+              "Failed to approve withdrawal. Please try again.",
+          });
         }
-      );
-
-      // Dismiss loading toast
-      toast.dismiss(loadingToast);
-
-      if (response.ok) {
-        toast.success("Withdrawal Approved", {
-          description: "The withdrawal has been successfully processed.",
-        });
-
-        // Refresh withdrawals list on success
-        fetchWithdrawals();
-        
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast.error("Approval Failed", {
-          description:
-            errorData.message ||
-            "Failed to approve withdrawal. Please try again.",
+      } catch (error) {
+        console.error("Error approving withdrawal:", error);
+        toast.error("Processing Error", {
+          description: "An error occurred while approving withdrawal.",
         });
       }
-    } catch (error) {
-      console.error("Error approving withdrawal:", error);
-      toast.error("Processing Error", {
-        description: "An error occurred while approving withdrawal.",
-      });
     }
-  }
-};
+  };
 
   const handleApplyDateFilter = () => {
     if (startDate && endDate && startDate > endDate) {
@@ -355,23 +400,29 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
     fetchStats();
   };
 
-  // Filter withdrawals based on status
-  const filteredWithdrawals = withdrawals.filter((withdrawal) => {
-    const matchesStatus =
-      filterStatus === "all" ||
-      (filterStatus === "pending" && !withdrawal.isPaymentApproved) ||
-      (filterStatus === "processed" && withdrawal.isPaymentApproved);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
-    return matchesStatus;
-  });
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
-  const pendingCount = withdrawals.filter((w) => !w.isPaymentApproved).length;
-  const processedCount = withdrawals.filter((w) => w.isPaymentApproved).length;
-  const allCount = withdrawals.length;
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const pendingCount = allWithdrawals.filter((w) => !w.isPaymentApproved).length;
+  const processedCount = allWithdrawals.filter((w) => w.isPaymentApproved).length;
+  const allCount = allWithdrawals.length;
 
   const hasActiveDateFilter = startDate || endDate;
 
-  if (loading) {
+  if (loading && allWithdrawals.length === 0) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -841,7 +892,8 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
             Withdrawal Requests
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage and approve user withdrawal requests
+            Showing {displayedWithdrawals.length} of {totalItems} requests
+            {filterStatus !== "all" && ` (filtered by ${filterStatus})`}
           </p>
         </div>
 
@@ -873,7 +925,10 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
             </h3>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setFilterStatus("all")}
+                onClick={() => {
+                  setFilterStatus("all");
+                  setCurrentPage(1);
+                }}
                 className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filterStatus === "all"
                     ? "bg-blue-600 text-white shadow-sm"
@@ -886,7 +941,10 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
                 </span>
               </button>
               <button
-                onClick={() => setFilterStatus("pending")}
+                onClick={() => {
+                  setFilterStatus("pending");
+                  setCurrentPage(1);
+                }}
                 className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filterStatus === "pending"
                     ? "bg-yellow-600 text-white shadow-sm"
@@ -899,7 +957,10 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
                 </span>
               </button>
               <button
-                onClick={() => setFilterStatus("processed")}
+                onClick={() => {
+                  setFilterStatus("processed");
+                  setCurrentPage(1);
+                }}
                 className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filterStatus === "processed"
                     ? "bg-green-600 text-white shadow-sm"
@@ -920,12 +981,14 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
               <span className="text-sm text-gray-500 mr-2">
                 Showing:{" "}
                 <span className="font-medium text-gray-700">
-                  {filterStatus === "pending" ? "Pending" : "Processed"}{" "}
-                  payments
+                  {filterStatus === "pending" ? "Pending" : "Processed"} payments
                 </span>
               </span>
               <button
-                onClick={() => setFilterStatus("all")}
+                onClick={() => {
+                  setFilterStatus("all");
+                  setCurrentPage(1);
+                }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
                 Clear filter
@@ -962,8 +1025,8 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredWithdrawals.length > 0 ? (
-                filteredWithdrawals.map((withdrawal) => (
+              {displayedWithdrawals.length > 0 ? (
+                displayedWithdrawals.map((withdrawal) => (
                   <tr key={withdrawal.userId} className="hover:bg-gray-50">
                     {/* Tasker Profile and Name */}
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1043,7 +1106,7 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
                       {!withdrawal.isPaymentApproved ? (
                         <button
                           onClick={() => handleApproveWithdrawal(withdrawal)}
-                          className="text-white hover:bg-blue-900 font-medium bg-blue-600 px-3 py-1 cursor-pointer rounded-lg border border-green-200  transition-colors"
+                          className="text-white hover:bg-blue-900 font-medium bg-blue-600 px-3 py-1 cursor-pointer rounded-lg border border-green-200 transition-colors"
                         >
                           Approve
                         </button>
@@ -1077,12 +1140,28 @@ const handleApproveWithdrawal = async (withdrawal: any) => {
         </div>
       </div>
 
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={currentPage < totalPages}
+            hasPrevPage={currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+          />
+        </div>
+      )}
+
       {/* Table Footer Info */}
-      {filteredWithdrawals.length > 0 && (
+      {displayedWithdrawals.length > 0 && (
         <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
           <div>
-            Showing {filteredWithdrawals.length} of {withdrawals.length}{" "}
-            requests
+            Showing {displayedWithdrawals.length} of {totalItems} requests
           </div>
           <div className="flex space-x-4">
             <span className="flex items-center">

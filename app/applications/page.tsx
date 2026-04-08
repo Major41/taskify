@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ApplicationsTable from "@/components/Applications/ApplicationsTable";
 import ApplicationsFilters from "@/components/Applications/ApplicationsFilters";
+import Pagination from "@/components/Clients/Pagination";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Tasker {
@@ -27,13 +28,20 @@ interface Tasker {
 
 export default function ApplicationsPage() {
   const { token } = useAuth();
-  const [applications, setApplications] = useState<Tasker[]>([]);
-  const [filteredApplications, setFilteredApplications] = useState<Tasker[]>(
+  const [allApplications, setAllApplications] = useState<Tasker[]>([]);
+  const [displayedApplications, setDisplayedApplications] = useState<Tasker[]>(
     [],
   );
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -51,9 +59,10 @@ export default function ApplicationsPage() {
     }
   }, [searchParams]);
 
+  // Apply filters and pagination whenever data or filters change
   useEffect(() => {
-    filterApplications();
-  }, [applications, searchQuery, selectedStatus]);
+    filterAndPaginateApplications();
+  }, [allApplications, searchQuery, selectedStatus, currentPage]);
 
   // Helper function to get status from is_approved field
   const getApplicationStatus = (tasker: Tasker) => {
@@ -108,21 +117,22 @@ export default function ApplicationsPage() {
           };
         });
 
-        setApplications(taskers);
+        setAllApplications(taskers);
       } else {
         console.error("API response structure unexpected:", data);
         throw new Error(data.message || "Failed to load applications");
       }
     } catch (error) {
       console.error("Failed to load applications:", error);
-      setApplications([]);
+      setAllApplications([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterApplications = () => {
-    let filtered = applications;
+  const filterAndPaginateApplications = () => {
+    // First, filter the applications
+    let filtered = [...allApplications];
 
     // Filter by status - use is_approved field to determine status
     if (selectedStatus !== "all") {
@@ -151,7 +161,24 @@ export default function ApplicationsPage() {
       );
     }
 
-    setFilteredApplications(filtered);
+    // Update total filtered count
+    setTotalItems(filtered.length);
+    
+    // Calculate total pages based on filtered results
+    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
+    setTotalPages(newTotalPages || 1);
+
+    // If current page is greater than new total pages, reset to page 1
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(1);
+    }
+
+    // Get the current page of data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedData = filtered.slice(startIndex, endIndex);
+    
+    setDisplayedApplications(paginatedData);
   };
 
   const handleApproveApplication = async (taskerId: string) => {
@@ -220,7 +247,37 @@ export default function ApplicationsPage() {
     }
   };
 
-  if (loading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
+
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status);
+    setCurrentPage(1); // Reset to first page when status filter changes
+  };
+
+  const pendingCount = allApplications.filter((a) => !a.is_approved).length;
+  const approvedCount = allApplications.filter((a) => a.is_approved).length;
+  const totalCount = allApplications.length;
+
+  if (loading && allApplications.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -243,8 +300,7 @@ export default function ApplicationsPage() {
               Tasker Application Requests
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {filteredApplications.length} of {applications.length}{" "}
-              applications
+              Showing {displayedApplications.length} of {totalItems} applications
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -252,12 +308,57 @@ export default function ApplicationsPage() {
           <div className="mt-4 lg:mt-0">
             <ApplicationsFilters
               searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
+              onSearchChange={handleSearchChange}
               selectedStatus={selectedStatus}
-              onStatusChange={setSelectedStatus}
-              totalApplications={applications.length}
-              filteredCount={filteredApplications.length}
+              onStatusChange={handleStatusChange}
+              totalApplications={totalCount}
+              filteredCount={totalItems}
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Status Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Applications</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{totalCount}</p>
+            </div>
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Pending</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingCount}</p>
+            </div>
+            <div className="p-2 bg-yellow-50 rounded-lg">
+              <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Approved</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{approvedCount}</p>
+            </div>
+            <div className="p-2 bg-green-50 rounded-lg">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>
@@ -265,14 +366,31 @@ export default function ApplicationsPage() {
       {/* Applications Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <ApplicationsTable
-          applications={filteredApplications}
+          applications={displayedApplications}
           onApproveApplication={handleApproveApplication}
           onRejectApplication={handleRejectApplication}
         />
       </div>
 
+      {/* Pagination */}
+      {totalItems > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onNextPage={handleNextPage}
+            onPrevPage={handlePrevPage}
+            hasNextPage={currentPage < totalPages}
+            hasPrevPage={currentPage > 1}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+          />
+        </div>
+      )}
+
       {/* Empty State */}
-      {filteredApplications.length === 0 && !loading && (
+      {totalItems === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
@@ -293,7 +411,7 @@ export default function ApplicationsPage() {
             No applications found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            {applications.length === 0
+            {totalCount === 0
               ? "No tasker applications have been submitted yet. Applications will appear here once users apply to become taskers."
               : "No applications match your current filters. Try adjusting your search criteria."}
           </p>
@@ -302,12 +420,32 @@ export default function ApplicationsPage() {
               onClick={() => {
                 setSearchQuery("");
                 setSelectedStatus("all");
+                setCurrentPage(1);
               }}
               className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
             >
               Clear all filters
             </button>
           )}
+        </div>
+      )}
+
+      {/* Table Footer Info */}
+      {displayedApplications.length > 0 && (
+        <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+          <div>
+            Showing {displayedApplications.length} of {totalItems} applications
+          </div>
+          <div className="flex space-x-4">
+            <span className="flex items-center">
+              <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded-full mr-1"></div>
+              Pending: {pendingCount}
+            </span>
+            <span className="flex items-center">
+              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded-full mr-1"></div>
+              Approved: {approvedCount}
+            </span>
+          </div>
         </div>
       )}
 
