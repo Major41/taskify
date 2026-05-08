@@ -52,7 +52,6 @@ export default function LoginPage() {
       };
 
       const response = await authService.login(credentials);
-      console.log("Login response:", response);
 
       if (response.success && response.userWithReviews?.user) {
         // Map the backend response to your User interface

@@ -28,10 +28,7 @@ interface Tasker {
 
 export default function ApplicationsPage() {
   const { token } = useAuth();
-  const [allApplications, setAllApplications] = useState<Tasker[]>([]);
-  const [displayedApplications, setDisplayedApplications] = useState<Tasker[]>(
-    [],
-  );
+  const [applications, setApplications] = useState<Tasker[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -40,12 +37,14 @@ export default function ApplicationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [prevPage, setPrevPage] = useState<number | null>(null);
   const [totalItems, setTotalItems] = useState(0);
   
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    loadApplications();
+    loadApplications(1);
   }, []);
 
   useEffect(() => {
@@ -59,37 +58,44 @@ export default function ApplicationsPage() {
     }
   }, [searchParams]);
 
-  // Apply filters and pagination whenever data or filters change
-  useEffect(() => {
-    filterAndPaginateApplications();
-  }, [allApplications, searchQuery, selectedStatus, currentPage]);
-
-  // Helper function to get status from is_approved field
-  const getApplicationStatus = (tasker: Tasker) => {
-    return tasker.is_approved ? "approved" : "pending";
-  };
-
-  const loadApplications = async () => {
+  const loadApplications = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await fetch(
-        "https://tasksfy.com/v1/web/admin/taskersWithReviews",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      
+      // Build URL with pagination and filters
+      let url = `https://tasksfy.com/v1/web/admin/taskersWithReviews?page=${page}&limit=${itemsPerPage}`;
+      
+      // Add status filter if needed
+      if (selectedStatus !== "all") {
+        url += `&status=${selectedStatus}`;
+      }
+      
+      // Add search query if needed
+      if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch applications");
       }
 
       const data = await response.json();
+      console.log("Applications API Response:", data);
 
       if (data.success && data.taskersWithReviewsAndSkills) {
+        // Set pagination info
+        setNextPage(data.nextPage);
+        setPrevPage(data.prevPage);
+        setCurrentPage(page);
+        
         // Transform the API response to match our Tasker interface
-        const taskers = data.taskersWithReviewsAndSkills.map((item: any) => {
+        const transformedApplications = data.taskersWithReviewsAndSkills.map((item: any) => {
           const tasker = item.tasker;
           const user = tasker.user;
 
@@ -117,68 +123,55 @@ export default function ApplicationsPage() {
           };
         });
 
-        setAllApplications(taskers);
+        setApplications(transformedApplications);
+        
+        // Calculate total items (you might need to get this from API response)
+        // If API doesn't return total count, you might need to calculate from filtered data
+        setTotalItems(transformedApplications.length);
+        
+        // Calculate total pages based on response
+        // If API returns total count, use that. Otherwise, assume there's a next page
+        if (data.totalCount) {
+          const newTotalPages = Math.ceil(data.totalCount / itemsPerPage);
+          setTotalPages(newTotalPages);
+          setTotalItems(data.totalCount);
+        } else {
+          // If no total count from API, we'll just set total pages based on nextPage
+          setTotalPages(page + (data.nextPage ? 1 : 0));
+        }
       } else {
         console.error("API response structure unexpected:", data);
         throw new Error(data.message || "Failed to load applications");
       }
     } catch (error) {
       console.error("Failed to load applications:", error);
-      setAllApplications([]);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterAndPaginateApplications = () => {
-    // First, filter the applications
-    let filtered = [...allApplications];
-
-    // Filter by status - use is_approved field to determine status
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((tasker) => {
-        const status = getApplicationStatus(tasker);
-        return status === selectedStatus;
-      });
+  const handlePageChange = async (page: number) => {
+    // If we're going to a page that requires new data from API
+    if (page > currentPage && nextPage) {
+      await loadApplications(page);
+    } else if (page < currentPage && prevPage) {
+      await loadApplications(page);
+    } else {
+      setCurrentPage(page);
     }
+  };
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (tasker) =>
-          tasker.first_name?.toLowerCase().includes(query) ||
-          tasker.last_name?.toLowerCase().includes(query) ||
-          tasker.phone_number?.toLowerCase().includes(query) ||
-          tasker.email?.toLowerCase().includes(query) ||
-          (tasker.skills &&
-            tasker.skills.some(
-              (skill) =>
-                skill.skill_name &&
-                skill.skill_name.toLowerCase().includes(query),
-            )) ||
-          (tasker.category && tasker.category.toLowerCase().includes(query)),
-      );
+  const handleNextPage = async () => {
+    if (nextPage) {
+      await loadApplications(nextPage);
     }
+  };
 
-    // Update total filtered count
-    setTotalItems(filtered.length);
-    
-    // Calculate total pages based on filtered results
-    const newTotalPages = Math.ceil(filtered.length / itemsPerPage);
-    setTotalPages(newTotalPages || 1);
-
-    // If current page is greater than new total pages, reset to page 1
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(1);
+  const handlePrevPage = async () => {
+    if (prevPage) {
+      await loadApplications(prevPage);
     }
-
-    // Get the current page of data
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedData = filtered.slice(startIndex, endIndex);
-    
-    setDisplayedApplications(paginatedData);
   };
 
   const handleApproveApplication = async (taskerId: string) => {
@@ -199,7 +192,7 @@ export default function ApplicationsPage() {
 
         if (data.success) {
           // Refresh applications to get updated status
-          await loadApplications();
+          await loadApplications(currentPage);
           alert("Application approved successfully!");
         } else {
           throw new Error(data.message || "Failed to approve application");
@@ -233,7 +226,7 @@ export default function ApplicationsPage() {
 
         if (data.success) {
           // Refresh applications to get updated status
-          await loadApplications();
+          await loadApplications(currentPage);
           alert("Application rejected successfully!");
         } else {
           throw new Error(data.message || "Failed to reject application");
@@ -247,37 +240,26 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when search changes
+    setCurrentPage(1);
+    // Reload with new search query
+    loadApplications(1);
   };
 
   const handleStatusChange = (status: string) => {
     setSelectedStatus(status);
-    setCurrentPage(1); // Reset to first page when status filter changes
+    setCurrentPage(1);
+    // Reload with new status filter
+    loadApplications(1);
   };
 
-  const pendingCount = allApplications.filter((a) => !a.is_approved).length;
-  const approvedCount = allApplications.filter((a) => a.is_approved).length;
-  const totalCount = allApplications.length;
+  // Calculate counts (you might need separate API calls for these)
+  const pendingCount = 0; // You'll need to get these from API or separate endpoint
+  const approvedCount = 0;
+  const totalCount = 0;
 
-  if (loading && allApplications.length === 0) {
+  if (loading && applications.length === 0) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center h-64">
@@ -300,7 +282,7 @@ export default function ApplicationsPage() {
               Tasker Application Requests
             </h1>
             <p className="text-gray-600 mt-1">
-              Showing {displayedApplications.length} of {totalItems} applications
+              Showing {applications.length} applications
               {selectedStatus !== "all" && ` (filtered by ${selectedStatus})`}
             </p>
           </div>
@@ -318,62 +300,17 @@ export default function ApplicationsPage() {
         </div>
       </div>
 
-      {/* Status Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Applications</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalCount}</p>
-            </div>
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingCount}</p>
-            </div>
-            <div className="p-2 bg-yellow-50 rounded-lg">
-              <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{approvedCount}</p>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Applications Table */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200/60 overflow-hidden">
         <ApplicationsTable
-          applications={displayedApplications}
+          applications={applications}
           onApproveApplication={handleApproveApplication}
           onRejectApplication={handleRejectApplication}
         />
       </div>
 
       {/* Pagination */}
-      {totalItems > 0 && (
+      {(nextPage || prevPage) && (
         <div className="mt-6">
           <Pagination
             currentPage={currentPage}
@@ -381,8 +318,8 @@ export default function ApplicationsPage() {
             onPageChange={handlePageChange}
             onNextPage={handleNextPage}
             onPrevPage={handlePrevPage}
-            hasNextPage={currentPage < totalPages}
-            hasPrevPage={currentPage > 1}
+            hasNextPage={!!nextPage}
+            hasPrevPage={!!prevPage}
             itemsPerPage={itemsPerPage}
             totalItems={totalItems}
           />
@@ -390,7 +327,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* Empty State */}
-      {totalItems === 0 && !loading && (
+      {applications.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg
@@ -411,41 +348,8 @@ export default function ApplicationsPage() {
             No applications found
           </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            {totalCount === 0
-              ? "No tasker applications have been submitted yet. Applications will appear here once users apply to become taskers."
-              : "No applications match your current filters. Try adjusting your search criteria."}
+            No tasker applications match your current criteria.
           </p>
-          {(searchQuery || selectedStatus !== "all") && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedStatus("all");
-                setCurrentPage(1);
-              }}
-              className="mt-4 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Table Footer Info */}
-      {displayedApplications.length > 0 && (
-        <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
-          <div>
-            Showing {displayedApplications.length} of {totalItems} applications
-          </div>
-          <div className="flex space-x-4">
-            <span className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded-full mr-1"></div>
-              Pending: {pendingCount}
-            </span>
-            <span className="flex items-center">
-              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded-full mr-1"></div>
-              Approved: {approvedCount}
-            </span>
-          </div>
         </div>
       )}
 
